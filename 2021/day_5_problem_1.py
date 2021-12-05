@@ -166,8 +166,11 @@ def make_grid(in_split):
 
     #print(f"grid:\n{grid}")
 
-    zam = np.where(grid.flatten() > 1)
-    print(f"zam: {len(zam[0])}")
+# Consider only horizontal and vertical lines. At how many points do at
+# least two lines overlap?
+
+    overlap = np.where(grid.flatten() > 1)
+    print(f"overlap: {len(overlap[0])}")
 
 make_grid(test_split)
 make_grid(real_split)
