@@ -124,6 +124,8 @@ for line in pass_scan:
 
 
 valid_passports = 0
+invalid_passports = 0
+
 code_set = set(necessary_codes)
 
 for passport in passport_list:
@@ -141,9 +143,11 @@ for passport in passport_list:
         valid_passports += 1
     else:
         print(f"INVALID: {passport}")
+        invalid_passports += 1
 
 print(f"{code_set}")
 print(f"Found {valid_passports} valid_passports")
-
+print(f"{invalid_passports} invalid passports")
+print(f"{valid_passports+invalid_passports} total")
 
 
