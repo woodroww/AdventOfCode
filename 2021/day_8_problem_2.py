@@ -106,7 +106,65 @@ a unique number of segments (highlighted above).
 
 In the output values, how many times do digits 1, 4, 7, or 8 appear?
 
+--- Part Two ---
+
+Through a little deduction, you should now be able to determine the
+remaining digits. Consider again the first example above:
+
+acedgfb cdfbe gcdfa fbcad dab cefabd cdfgeb eafb cagedb ab |
+cdfeb fcadb cdfeb cdbaf
+
+After some careful analysis, the mapping between signal wires and segments
+only make sense in the following configuration:
+
+ dddd
+e    a
+e    a
+ ffff
+g    b
+g    b
+ cccc
+
+So, the unique signal patterns would correspond to the following digits:
+
+acedgfb: 8
+cdfbe: 5
+gcdfa: 2
+fbcad: 3
+dab: 7
+cefabd: 9
+cdfgeb: 6
+eafb: 4
+cagedb: 0
+ab: 1
+Then, the four digits of the output value can be decoded:
+
+cdfeb: 5
+fcadb: 3
+cdfeb: 5
+cdbaf: 3
+Therefore, the output value for this entry is 5353.
+
+Following this same process for each entry in the second, larger example above, the output value of each entry can be determined:
+
+fdgacbe cefdb cefbgd gcbe: 8394
+fcgedb cgb dgebacf gc: 9781
+cg cg fdcagb cbg: 1197
+efabcd cedba gadfec cb: 9361
+gecf egdcabf bgf bfgea: 4873
+gebdcfa ecba ca fadegcb: 8418
+cefg dcbef fcge gbcadfe: 4548
+ed bcgafe cdgba cbgef: 1625
+gbdfcae bgc cg cgb: 8717
+fgae cfgab fg bagce: 4315
+Adding all of the output values in this larger example produces 61229.
+
+For each entry, determine all of the wire/segment connections and decode the
+four-digit output values. What do you get if you add up all of the output
+values?
+
 """
+
 demo_input = [
 "be cfbegad cbdgef fgaecd cgeb fdcge agebfd fecdb fabcd edb | fdgacbe cefdb cefbgd gcbe",
 "edbfga begcd cbg gc gcadebf fbgde acbgfd abcde gfcbed gfec | fcgedb cgb dgebacf gc",
@@ -128,7 +186,7 @@ for line in file_input:
     real_input.append(line[:-1])
 
 digit_data = real_input
-#digit_data = demo_input
+digit_data = demo_input
 
 correct_numbers = {
     0: "abcefg",
@@ -195,55 +253,180 @@ def examine_index(idx):
     print(mixed_digits)
     print(mixed_nums)
 
-
 # 1, 4, 7, and 8 are unique lengths
 def parse_10(in_string):
 
     digits = in_string.split(" ")
     known_digits = []
     unknown_digits = []
+    known_dict = {}
 
     for string in digits:
        
         if len(string) == len(correct_numbers[1]):
             known_digits.append(string)
+            known_dict[1] = string
         elif len(string) == len(correct_numbers[4]):
             known_digits.append(string)
+            known_dict[4] = string
         elif len(string) == len(correct_numbers[7]):
             known_digits.append(string)
+            known_dict[7] = string
         elif len(string) == len(correct_numbers[8]):
             known_digits.append(string)
+            known_dict[8] = string
         else:
             unknown_digits.append(string)
 
-    return known_digits, unknown_digits
+    return known_dict, known_digits, unknown_digits
 
-# In the output values, how many times do digits 1, 4, 7, or 8 appear?
+def print_unknown_lengths(unknown):
+    for i in range(len(unknown)):
+        print(f"{unknown[i]} {len(unknown[i])}")
 
-count = 0
-for digit in digit_data:
-    known, unknown = parse_10(digit.split(" | ")[1])
-    count += len(known)
+def print_correct_with_length(in_length):
+    for i in range(10):
+        length = len(correct_numbers[i])
+        if length == in_length:
+            print(f"digit:{i} {correct_numbers[i]} len:{length}")
 
-print(f"count: {count}")
+def binary_digit_code(digit_letter_string):
+   
+    result = 0
+    for c in digit_letter_string:
+        alph_idx = ord(c) - 97 
+        result += 10**alph_idx
+    return result
+
+def binary_digit_string(digit_letter_string):
+    
+    result = binary_digit_code(digit_letter_string)
+    extra_zeros = 8 - len(str(result))
+    result_str = ""
+    for _ in range(extra_zeros):
+        result_str += "0"
+    result_str += str(result)
+    return result_str
+
+
+    # does a contain b
+def contains(a, b):
+    return (a & b) == b
+
+def binaryStuff():
+
+    test = "ecagb"
+    pit = "bagce"
+    print(binary_digit_code(test))
+    print(binary_digit_code(pit))
+
+    a = int("10011001", 2)
+    b = int("00011000", 2)
+
+    contains(a, b)
+    # ^ xor
+    0x1 << ord('g') - ord('a')
+    f"{26:8b}"
+    f"{0x1 << ord('c') - ord('a'):8b}"
+
+    # binary string to int
+    int('11111111', 2)
+
+    # int to binary string
+    "{0:b}".format(37)
+    # or
+    f"{37:8b}"
+
+display_number(1) # 2
+display_number(4) # 4
+display_number(7) # 3
+display_number(8) # 7
+
+display_number(2) # 5
+display_number(3) # 5
+display_number(5) # 5
+
+display_number(0) # 6
+display_number(6) # 6
+display_number(9) # 6
+
+
+def find_unknowns(in_10_string):
+
+    known_dict, known_list, unknown = parse_10(in_10_string)
+    len_5 = []
+    len_6 = []
+
+    for digit in unknown:
+        if len(digit) == 5:
+            len_5.append(digit)
+        elif len(digit) == 6:
+            len_6.append(digit)
+
+    # find number 6
+    for digit in len_6:
+        if not contains(binary_digit_code(digit), binary_digit_code(known_dict[1])):
+            known_dict[6] = digit
+            len_6.remove(digit)
+            break
+
+    # find number 5
+    for digit in len_5:
+        if contains(binary_digit_code(known_dict[6]), binary_digit_code(digit)):
+            known_dict[5] = digit
+            len_5.remove(digit)
+            break
+
+    # find number 3
+    for digit in len_5:
+        if contains(binary_digit_code(digit), binary_digit_code(known_dict[1])):
+            known_dict[3] = digit
+            len_5.remove(digit)
+            break
+
+    # number 2 should only remain in len_5
+    known_dict[2] = len_5[0]
+
+    # find number 9
+    for digit in len_6:
+        if contains(binary_digit_code(digit), binary_digit_code(known_dict[4])):
+            known_dict[9] = digit
+            len_6.remove(digit)
+            break
+
+    # number 0 remains in len_6
+    known_dict[0] = len_6[0]
+
+    return known_dict
+
+
+jam = "be cfbegad cbdgef fgaecd cgeb fdcge agebfd fecdb fabcd edb"
+jam_2 = "fdgacbe cefdb cefbgd gcbe"
+
+discovered = find_unknowns(jam)
 
 
 
 
+"gfedcba"
+"1111111"
+for digit in known_list:
+    num = list(known_dict.keys())[list(known_dict.values()).index(digit)]
+    print(f"{digit} {binary_digit_string(digit)} {num}")
+for digit in len_5:
+    print(f"{digit} {binary_digit_string(digit)}")
+for digit in len_6:
+    print(f"{digit} {binary_digit_string(digit)}")
 
 
+for digit in [2,3,5]:
+    print(f"{correct_numbers[digit]} {binary_digit_string(correct_numbers[digit])}")
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+digits = []
+output = []
+for j in jam.split(" "):
+    digits.append(binary_digit_code(j))
+for j in jam_2.split(" "):
+    output.append(binary_digit_code(j))
 

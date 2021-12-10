@@ -107,6 +107,10 @@ histy = np.histogram(real_input)
 crabs = real_input
 #crabs = demo_input
 
+# something like this from primeagen
+# d = abs differece
+# distance += d * (d + 1) / 2
+
 def fuel_from_a_to_b(move_dist):
     x = 0
     spent = 0

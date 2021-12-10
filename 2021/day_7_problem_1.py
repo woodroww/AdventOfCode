@@ -98,7 +98,7 @@ position = np.argmin(spent_fuels)
 print(f"Position {position}")
 print(f"Fuel Spent {spent_fuels[position]}")
 
-
-
+# median is also the answer
+crabs[len(crabs) // 2]
 
 
