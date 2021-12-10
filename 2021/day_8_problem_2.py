@@ -186,7 +186,11 @@ for line in file_input:
     real_input.append(line[:-1])
 
 digit_data = real_input
-digit_data = demo_input
+#digit_data = demo_input
+
+
+
+
 
 correct_numbers = {
     0: "abcefg",
@@ -308,35 +312,14 @@ def binary_digit_string(digit_letter_string):
     result_str += str(result)
     return result_str
 
-
     # does a contain b
+    # mierda return (a & b) == b
+    # if all elements of A are in B.
+    # A.issubset(B)
 def contains(a, b):
-    return (a & b) == b
+    return set(b).issubset(set(a))
 
-def binaryStuff():
-
-    test = "ecagb"
-    pit = "bagce"
-    print(binary_digit_code(test))
-    print(binary_digit_code(pit))
-
-    a = int("10011001", 2)
-    b = int("00011000", 2)
-
-    contains(a, b)
-    # ^ xor
-    0x1 << ord('g') - ord('a')
-    f"{26:8b}"
-    f"{0x1 << ord('c') - ord('a'):8b}"
-
-    # binary string to int
-    int('11111111', 2)
-
-    # int to binary string
-    "{0:b}".format(37)
-    # or
-    f"{37:8b}"
-
+"""
 display_number(1) # 2
 display_number(4) # 4
 display_number(7) # 3
@@ -349,84 +332,123 @@ display_number(5) # 5
 display_number(0) # 6
 display_number(6) # 6
 display_number(9) # 6
-
+"""
 
 def find_unknowns(in_10_string):
 
-    known_dict, known_list, unknown = parse_10(in_10_string)
+    # get the knowns and unknowns
+    known_dict, _, unknown = parse_10(in_10_string)
     len_5 = []
     len_6 = []
-
+    
+    # divide unknowns by length, 5 or 6
     for digit in unknown:
         if len(digit) == 5:
             len_5.append(digit)
         elif len(digit) == 6:
             len_6.append(digit)
-
-    # find number 6
+        else:
+            print(f"why do we have this length? {digit}")
+    
+    # Find # 1
+    # find digit 6
+    # we have 0, 6, 9 unknown of length 6
+    # we know 1 already
+    # 0 and 9 contain 1, 6 does not contain 9 
+    # len_6 should have 0, 9 after this part
     for digit in len_6:
-        if not contains(binary_digit_code(digit), binary_digit_code(known_dict[1])):
+        if not contains(digit, known_dict[1]):
             known_dict[6] = digit
+            #print(f"Found 6 {known_dict[6]}")
             len_6.remove(digit)
             break
-
-    # find number 5
+    
+    # Find # 2
+    # find digit 5
+    # we now have 6
+    # len_5 should be 2, 3, 5
+    # 6 contains 5 but not 2 or 3
+    # len_5 should be 2, 3 after this part
     for digit in len_5:
-        if contains(binary_digit_code(known_dict[6]), binary_digit_code(digit)):
+        contained = contains(known_dict[6], digit)
+        #print(f"looking for 5")
+        #print(f"6:{known_dict[6]} contains digit:{digit} {contained}") 
+        if contained:
             known_dict[5] = digit
+            #print(f"Found 5 {known_dict[5]}")
             len_5.remove(digit)
             break
 
-    # find number 3
+    # Find # 3
+    # find digit 3
+    # len_5 should be 2, 3
+    # 3 contains 1, 2 does not contain 1
+    # len_5 should be 2 after this part
     for digit in len_5:
-        if contains(binary_digit_code(digit), binary_digit_code(known_dict[1])):
+        if contains(digit, known_dict[1]):
             known_dict[3] = digit
+            # print(f"Found 3 {known_dict[3]}")
             len_5.remove(digit)
             break
 
     # number 2 should only remain in len_5
     known_dict[2] = len_5[0]
+    #print(f"'Found' 2 {known_dict[2]}")
 
     # find number 9
+    # len_6 should have 0, 9
+    # 0 does not contain 4
+    # 9 does contain 4
+    # len_6 should only have 0 left afte this part
     for digit in len_6:
-        if contains(binary_digit_code(digit), binary_digit_code(known_dict[4])):
+        if contains(digit, known_dict[4]):
             known_dict[9] = digit
+            #print(f"Found 9 {known_dict[9]}")
             len_6.remove(digit)
             break
 
     # number 0 remains in len_6
     known_dict[0] = len_6[0]
+    #print(f"'Found' 0 {known_dict[0]}")
 
     return known_dict
 
 
-jam = "be cfbegad cbdgef fgaecd cgeb fdcge agebfd fecdb fabcd edb"
-jam_2 = "fdgacbe cefdb cefbgd gcbe"
+#jam = "be cfbegad cbdgef fgaecd cgeb fdcge agebfd fecdb fabcd edb"
+#jam_2 = "fdgacbe cefdb cefbgd gcbe"
+#discovered = find_unknowns(jam)
 
-discovered = find_unknowns(jam)
+# For each entry, determine all of the wire/segment connections and decode the
+# four-digit output values. What do you get if you add up all of the output
+# values?
+
+def key_for_val(val, dict):
+    keys = list(dict.keys())
+    original = list(dict.values())
+    binary = []
+    for item in original:
+        binary.append(binary_digit_code(item))
+    damn = binary.index(binary_digit_code(val))
+    return keys[damn]
+
+total = 0
+
+for line in digit_data:
+    
+    splitsies = line.split(" | ")
+    digits = splitsies[0] # the ten digits
+    numbers = splitsies[1].split(" ") # the 4 digit readout
+    #print(f"{numbers}")
+    calculated_digits = find_unknowns(digits)
+    #print(f"{calculated_digits}")
+    display_digits = ""
+    for num in numbers:
+        display_digit = key_for_val(num, calculated_digits)
+        display_digits += str(display_digit)
+
+    total += int(display_digits)
+
+print(f"Total: {total}")
 
 
-
-
-"gfedcba"
-"1111111"
-for digit in known_list:
-    num = list(known_dict.keys())[list(known_dict.values()).index(digit)]
-    print(f"{digit} {binary_digit_string(digit)} {num}")
-for digit in len_5:
-    print(f"{digit} {binary_digit_string(digit)}")
-for digit in len_6:
-    print(f"{digit} {binary_digit_string(digit)}")
-
-
-for digit in [2,3,5]:
-    print(f"{correct_numbers[digit]} {binary_digit_string(correct_numbers[digit])}")
-
-
-digits = []
-output = []
-for j in jam.split(" "):
-    digits.append(binary_digit_code(j))
-for j in jam_2.split(" "):
-    output.append(binary_digit_code(j))
 
