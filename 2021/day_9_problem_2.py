@@ -109,7 +109,7 @@ for line in file_input:
     real_input.append(line[:-1])
 
 digit_data = real_input
-digit_data = demo_input
+#digit_data = demo_input
 
 numbers = []
 for line_string in digit_data:
@@ -126,24 +126,28 @@ def adjacent_point_values(in_grid, x, y):
     adjacent = {}
     # can go left (-1)
     if x > 0:
-        adjacent['left'] = in_grid[x-1][y]
-        adjacent['left_x'] = x-1
-        adjacent['left_y'] = y
+        #adjacent['left'] = in_grid[x-1][y]
+        #adjacent['left_x'] = x-1
+        #adjacent['left_y'] = y
+        adjacent['left'] = { "height": in_grid[x-1][y], "x": x-1, "y": y }
     # can go right (+1)
     if x < in_grid.shape[0] - 1:
-        adjacent['right'] = in_grid[x+1][y]
-        adjacent['right_x'] = x+1
-        adjacent['right_y'] = y
+        #adjacent['right'] = in_grid[x+1][y]
+        #adjacent['right_x'] = x+1
+        #adjacent['right_y'] = y
+        adjacent['right'] = { "height": in_grid[x+1][y], "x": x+1, "y": y }
     # can go up (-1)
     if y > 0:
-        adjacent['up'] = in_grid[x][y-1]
-        adjacent['up_x'] = x
-        adjacent['up_y'] = y-1
+        #adjacent['up'] = in_grid[x][y-1]
+        #adjacent['up_x'] = x
+        #adjacent['up_y'] = y-1
+        adjacent['up'] = { "height": in_grid[x][y-1], "x": x, "y": y-1 }
     # can go down
     if y < in_grid.shape[1] - 1:
-        adjacent['down'] = in_grid[x][y+1]
-        adjacent['down_x'] = x
-        adjacent['down_y'] = y+1
+        #adjacent['down'] = in_grid[x][y+1]
+        #adjacent['down_x'] = x
+        #adjacent['down_y'] = y+1
+        adjacent['down'] = { "height": in_grid[x][y+1], "x": x, "y": y+1 }
     return adjacent
 
 def lowestPoints(in_grid, add_height):
@@ -159,10 +163,11 @@ def lowestPoints(in_grid, add_height):
             adjacent = adjacent_point_values(in_grid, x, y)
             
             lowspot = True
-
-            for key in adjacent.keys():
-                if (adjacent[key] <= current_height):
-                    lowspot = False
+            
+            for key in ["up", "down", "left", "right"]:
+                if key in adjacent:
+                    if (adjacent[key]["height"] <= current_height):
+                        lowspot = False
             if lowspot:
                 if add_height:
                     lowpoints[x][y] = 1 + current_height
@@ -175,33 +180,54 @@ risk_levels = lowestPoints(grid, True)
 print(f"sum of risk levels {risk_levels.sum()}")
 
 
-
 def findBasin(in_grid, x, y):
 
     found = []
     current = in_grid[x][y]
     adjacent = adjacent_point_values(in_grid, x, y)
-    if (adjacent['up'] > current) and (adjacent['up'] < 9):
-        found.append([adjacent['up_x'], adjacent['up_y']])
-        found += findBasin(in_grid, x, y)
-    if (adjacent['down'] > current) and (adjacent['down'] < 9):
-        found.append([adjacent['down_x'], adjacent['down_y']])
-        found += findBasin(in_grid, x, y)
-    if (adjacent['left'] > current) and (adjacent['left'] < 9):
-        found.append([adjacent['left_x'], adjacent['left_y']])
-        found += findBasin(in_grid, x, y)
-    if (adjacent['right'] > current) and (adjacent['right'] < 9):
-        found.append([adjacent['right_x'], adjacent['right_y']])
-        found += findBasin(in_grid, x, y)
+    
+    for key in ["up", "down", "left", "right"]:
+        if key in adjacent:
+            cell = adjacent[key]
+            height = cell["height"]
+            if (height > current) and (height < 9):
+                found.append([cell['x'], cell['y']])
+                found += findBasin(in_grid, cell['x'], cell['y'])
 
     return found
 
-
-
 low_points = lowestPoints(grid, False)
 low_xs, low_ys = np.where(low_points == 1)
+basin_list = []
 
-for 
+for x, y in zip(low_xs, low_ys):
+    basin = findBasin(grid, x, y)
+    basin.append([x, y])
+    basin_list.append(basin)
+
+def make_basin_grids(in_list):
+    basin_grids = []
+    for basin in in_list:
+        basin_grid = np.zeros(grid.shape, dtype=np.uint8)
+        for point in basin:
+            basin_grid[point[0]][point[1]] = 1
+        basin_grids.append(basin_grid)
+    return basin_grids
+
+basin_grids = make_basin_grids(basin_list)
+
+# Find the three largest basins and multiply their sizes together. In the above
+# example, this is 9 * 14 * 9 = 1134.
+
+basin_sums = []
+for basin_grid in basin_grids:
+    basin_sums.append(basin_grid.sum())
+basin_sums.sort(reverse=True)
+product = 1
+for sum in basin_sums[:3]:
+    product *= sum
+
+print(f"3 largest basins product: {product}")
 
 
 
