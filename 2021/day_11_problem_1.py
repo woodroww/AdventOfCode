@@ -379,46 +379,44 @@ def adjacent(in_grid, x, y):
         adjacent['right'] = { "energy": in_grid[x][y+1], "x": x, "y": y+1 }
     return adjacent
 
-def flash(in_grid, x, y, flash_grid):
+def increment_adjacent(in_grid, x, y):
 
     adj = adjacent(in_grid, x, y)
+    flash_grid = np.zeros(shape=in_grid.shape, dtype=np.uint16)
     
     # the neighboring results of this x,y flash
     for key in adj:
         a = adj[key]
         flash_grid[a["x"]][a["y"]] += 1
-    
-    current_grid = in_grid + flash_grid
-    for y in range(in_grid.shape[1]):
-        for x in range(in_grid.shape[0]):
-            if current_grid[x][y] > 9:
-                flash_grid = flash(in_grid, x, y, flash_grid)
+        if flash_grid[a["x"]][a["y"]] +\
+            in_grid[a["x"]][a["y"]] == :
 
-#    print(f"flash: {x},{y}\n{in_grid}")
-    return in_grid
+    return flash_grid
 
 def step(in_grid):
     
-    in_grid = in_grid + 1
+    step_grid = in_grid + 1
     flash_grid = np.zeros(shape=in_grid.shape, dtype=np.uint16)
+    flash_grid += 1
+    xs, ys = np.where(step_grid > 9)
 
-    for y in range(in_grid.shape[1]):
-        for x in range(in_grid.shape[0]):
-            if in_grid[x][y] > 9:
-                flash_grid = flash(in_grid, x, y, flash_grid)
-    in_grid = in_grid + flash_grid
+    for x, y in zip(xs, ys):
+        flash_grid += increment_adjacent(step_grid, x, y)
 
-    #xs, ys = np.where(in_grid > 9)
-    in_grid[in_grid > 9] = 0
+    
 
+    print(f"in_grid:\n{in_grid}")
+    print(f"flash_grid:\n{flash_grid}")
 
-    print(f"{flash_grid}")
-    print(f"{in_grid}")
-    return in_grid
+    zero_it = in_grid+flash_grid
+    zero_it[zero_it > 9] = 0
+
+    print(f"out grid:\n{zero_it}")
+    return zero_it  
 
 
 grid = np.array(lines)
-print(f"step\n{grid}")
+
 grid = step(grid)
 
 
