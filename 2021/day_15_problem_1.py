@@ -78,7 +78,7 @@ for line in file_input:
     real_input.append(line[:-1])
 
 grid = real_input
-grid = demo_input
+#grid = demo_input
 
 nums = []
 
@@ -107,20 +107,6 @@ def adjacent(in_grid, x, y):
     if y < in_grid.shape[1] - 1:
         adjacent['right'] = { "danger": in_grid[x][y+1], "x": x, "y": y+1 }
     return adjacent
-
-
-jam = [(0,0,1), (0,1,1), (0,2,6)]
-h = heapdict.heapdict()
-# key = priority
-h[(0,0)] = 1
-list(h.items())
-# Out[7]: [((0, 0), 1)]
-list(h.keys())
-# Out[8]: [(0, 0)]
-list(h.values())
-# Out[9]: [1]
-h[(0,1)] = 1
-h[(0,2)] = 6
 
 
 best_distances = {}
@@ -181,6 +167,9 @@ while at:
 
 path.reverse()
 
+total_risk = 0
+for coord in path[1:]: # don't count the first one unless you enter it
+    total_risk += grid[coord[0]][coord[1]]
+print(f"risk {total_risk}")
 
 
-# superfluous fuck me
