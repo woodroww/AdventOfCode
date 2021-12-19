@@ -125,11 +125,12 @@ h[(0,2)] = 6
 
 best_distances = {}
 visited = {}
+previous = {}
 for y in range(grid.shape[0]):
     for x in range(grid.shape[1]):
         best_distances[(x, y)] = sys.maxsize
         visited[(x, y)] = False
-
+        previous[(x, y)] = (-1, -1)
 
 target_cell = (grid.shape[0] - 1, grid.shape[1] - 1)
 start_cell = (0, 0)
@@ -137,27 +138,49 @@ start_cell = (0, 0)
 # put the start in the queue
 queue = heapdict.heapdict()
 queue[start_cell] = 0
-best_distances[0] = 0
+best_distances[start_cell] = 0
 
 while len(queue) > 0:
-    node = queue.pop_item()
+    node = queue.popitem()
     visited[node[0]] = True
+    if best_distances[node[0]] < node[1]:# optimization
+        continue
     x = node[0][0]
     y = node[0][1]
-    danger = node[1]
     neighbors = adjacent(grid, x, y)
-    for n in neighbors:
+    for k in neighbors:
+        n = neighbors[k]
         coords = (n["x"], n["y"])
         if visited[coords]:
             continue
         newDist = best_distances[node[0]] + n["danger"]
 
         if newDist < best_distances[coords]:
+            previous[coords] = node[0]
             best_distances[coords] = newDist
             queue[coords] = newDist
+    # check for end/target_cell
+    if node == target_cell:
+        break;
     #return best_distances
 
+# shortest path
+# best_distances, previous
+if best_distances[target_cell] == sys.maxsize:
+    print("So we have never found the end ERROR!")
+
+path = []
+
+at = target_cell
+
+while at:
+    if at == (-1, -1):
+        break
+    path.append(at)
+    at = previous[at]
+
+path.reverse()
 
 
 
-
+# superfluous fuck me
