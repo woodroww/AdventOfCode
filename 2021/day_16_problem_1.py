@@ -143,6 +143,7 @@ version numbers in all packets?
 
 """
 
+
 encode_dict = {
     '0': '0000',
     '1': '0001',
@@ -161,29 +162,6 @@ encode_dict = {
     'E': '1110',
     'F': '1111',
     }
-"""
-# input
-D2FE28
-# decoded
-110100101111111000101000
-VVVTTTAAAAABBBBBCCCCC
-
-V (110) are the packet version 6
-T (100) are the packet type ID, 4 
-A (10111) start with a 1 (not the last group, keep reading)
-and contain the first four bits of the number, 0111.
-B (11110) start with a 1 (not the last group, keep
-reading) and contain four more bits of the number, 1110.
-C (00101) start with a 0 (last group, end of packet) and
-contain the last four bits of the number, 0101.
-0 bits at the end are extra due to the hexadecimal
-representation and should be ignored.
-So, this packet represents a literal value with binary representation
-011111100101, which is 2021 in decimal.
-"""
-
-
-
 
 def parseInput(input):
     output = ""
@@ -209,6 +187,8 @@ def parseLiteral(input):
     return bit_string, input
 
 def parseSubWithLength(bit_length, input):
+    
+    print(f"parseSubWithLength:(bit_length:{bit_length}, input:{input}")
     bits_read = 0
     bit_string = ""
     while bits_read < bit_length:
@@ -220,6 +200,7 @@ def parseSubWithLength(bit_length, input):
     return bit_string, input
 
 def parseSubWithPacketCount(count, input):
+    print(f"parseSubWithPacketCount(count:{bit_length}, input:{input})")
     bit_string = ""
     for _ in range(count):
         bits, input = removeChars(input, 11)
@@ -233,12 +214,12 @@ def parseOperator(input):
         # the next 15 bits represent the total length
         # in bits of the sub-packets contained by this packet
         length, input = removeChars(input, 15)
-        bits, input = parseSubWithLength(int(length), input)
+        bits, input = parseSubWithLength(int(length, 2), input)
     if length_type_id == '1':
         # the next 11 bits represent the number of sub-packets
         # immediately contained by this packet 
         num_sub_packets, input = removeChars(input, 11)
-        bits, input = parseSubWithPacketCount(int(num_sub_packets), input)
+        bits, input = parseSubWithPacketCount(int(num_sub_packets, 2), input)
     return bits, input
     
 def parsePacketString(input):
@@ -266,13 +247,31 @@ def parsePacketString(input):
 
 demo_input_1 = "D2FE28"
 demo_true_1 = "110100101111111000101000"
+parts_1 =     "VVVTTTAAAAABBBBBCCCCC"
+
 demo_input_2 = "38006F45291200"
 demo_true_2 = "00111000000000000110111101000101001010010001001000000000"
+parts_2 =     "VVVTTTILLLLLLLLLLLLLLLAAAAAAAAAAABBBBBBBBBBBBBBBB"
 
-demo_result, leftover_input = parsePacketString(parseInput(demo_input_1))
-print(f"parse: {demo_result}")
-print(f"true:  {demo_true_2}")
+demo_input_3 = "EE00D40C823060"
+demo_true_3 = "11101110000000001101010000001100100000100011000001100000"
+parts_3 =     "VVVTTTILLLLLLLLLLLAAAAAAAAAAABBBBBBBBBBBCCCCCCCCCCC"
 
+assert(parseInput(demo_input_1) == demo_true_1)
+assert(parseInput(demo_input_2) == demo_true_2)
+assert(parseInput(demo_input_3) == demo_true_3)
+
+def makeItWork(input, inTrue=""):
+    bin_string = parseInput(input)
+    print(f"input: {input}")
+    print(f"input: {bin_string}")
+    if len(inTrue) > 0:
+        print(f"true:  {inTrue}")
+    result, leftover = parsePacketString(bin_string)
+    print(f"result: {result}")
+    print(f"leftover: {leftover}")
+
+makeItWork(demo_input_2, demo_true_2)
 
 file_name = "day_16_input.txt"
 with open(file_name) as f:
