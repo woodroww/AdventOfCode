@@ -132,6 +132,9 @@ and still eventually be within the target area after any step. What is the
 highest y position it reaches on this trajectory?
 """
 
+
+
+import sys
 import numpy as np
 
 demo_input = "target area: x=20..30, y=-10..-5"
@@ -187,35 +190,84 @@ class Probe:
 # step through return True if landed in target on a step
 # return false if probe misses target
 def fire_probe(probe):
-    #print(probe)
+
     flying_correctly = True
-    
+    steps = [[probe.x, probe.y]]
+
     while flying_correctly:
+
         probe.step()
-        #print(probe)
+        steps.append([probe.x, probe.y])
+
         if probe.in_target(target_top_left, target_bottom_right):
             print(f"In target at {probe.x}, {probe.y}")
-            return True
+            return True, steps
+        
         # gone past the target
         if probe.x > target_bottom_right[0]:
             flying_correctly = False
+            print(f"past target on x")
         # probe has stopped moving in x and has still not reached the target
         elif probe.x_v == 0 and probe.x < target_top_left[0]:
             flying_correctly = False
+            print(f"fell short of target on x")
         # probe y is under target
         elif probe.y < target_bottom_right[1]:
             flying_correctly = False
+            print(f"probe y is under target")
+    
+    return False, steps
+
+def point_is_target(x, y, top_left, bottom_right):
+    if x >= top_left[0] and x <= bottom_right[0] and\
+         y <= top_left[1] and y >= bottom_right[1]:
+           return True
     return False
 
-print(f"{target_top_left} {target_bottom_right}")
+def at_probe_point(in_steps, x, y):
+    for xy in in_steps:
+        if xy[0] == x and xy[1] == y:
+            return True
+    return False
+
+def plot_map(in_steps):
+    in_steps = np.array(in_steps)
+    maxs = np.amax(in_steps, axis=0)
+    mins = np.amin(in_steps, axis=0)
+    max_x = maxs[0]
+    max_y = maxs[1]
+    min_x = mins[0]
+    min_y = mins[1]
+    for y in range(max_y, min_y-1, -1):
+        line = ""
+        for x in range(min_x, max_x+1):
+            if at_probe_point(in_steps, x, y):
+                line += "#"
+            elif point_is_target(x, y, target_top_left, target_bottom_right):
+                line += "T"
+            else:
+                line += "."
+        print(line)
+
+print(f"Target:")
+print(f"{target_top_left[0]}, {target_top_left[1]}   {target_bottom_right[0]}, {target_top_left[1]}")
+print(f"{target_top_left[0]}, {target_bottom_right[1]}  {target_bottom_right[0]}, {target_bottom_right[1]}")
 
 probe = Probe(7, 2) # in target at 28, -7
-fire_probe(probe)
+in_target, steps = fire_probe(probe)
+plot_map(steps)
+
 probe = Probe(6, 3) # in target at 21, -9
-fire_probe(probe)
+in_target, steps = fire_probe(probe)
+plot_map(steps)
+
 probe = Probe(9, 0) # in target at 30, -6
-fire_probe(probe)
+in_target, steps = fire_probe(probe)
+plot_map(steps)
+
 probe = Probe(17,-4) # miss
-fire_probe(probe)
+in_target, steps = fire_probe(probe)
+plot_map(steps)
+
 
 

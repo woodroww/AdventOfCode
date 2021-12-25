@@ -78,9 +78,12 @@ the length type ID:
 
 If the length type ID is 0, then the next 15 bits are a number that represents
 the total length in bits of the sub-packets contained by this packet.
+
 If the length type ID is 1, then the next 11 bits are a number that represents
 the number of sub-packets immediately contained by this packet.
-Finally, after the length type ID bit and the 15-bit or 11-bit field, the sub-packets appear.
+
+Finally, after the length type ID bit and the 15-bit or 11-bit field, the
+sub-packets appear.
 
 For example, here is an operator packet (hexadecimal string 38006F45291200)
 with length type ID 0 that contains two sub-packets:
@@ -187,63 +190,68 @@ def parseLiteral(input):
     return bit_string, input
 
 def parseSubWithLength(bit_length, input):
-    
-    print(f"parseSubWithLength:(bit_length:{bit_length}, input:{input}")
+    print(f"parseSubWithLength:(bit_length:{bit_length}")#, input:{input}")
     bits_read = 0
-    bit_string = ""
-    while bits_read < bit_length:
+    output = []
+    # this is where I don't understand how many to read 11 or 16 or what
+    """while bits_read < bit_length:
         if (bit_length - bits_read) % 11 > 0:
             print(f"padding?")
         bits, input = removeChars(input, 11)
         bits_read += 11
-        bit_string += bits
-    return bit_string, input
+        output.append(int(bits, 2))"""
+    # ok maybe not readin gnow
+
+    bits, input = removeChars(input, bit_length)
+    return output, input
 
 def parseSubWithPacketCount(count, input):
-    print(f"parseSubWithPacketCount(count:{bit_length}, input:{input})")
-    bit_string = ""
+    print(f"parseSubWithPacketCount(count:{count}")#, input:{input})")
+    output = []
     for _ in range(count):
         bits, input = removeChars(input, 11)
-        bit_string += bits
-    return bit_string, input
+        output.append(int(bits, 2))
+    return output, input
 
+# an operator that performs some calculation on one or more sub-packets
 def parseOperator(input):
     length_type_id, input = removeChars(input, 1)
-    bits = ""
+    output = [] 
     if length_type_id == '0':
         # the next 15 bits represent the total length
         # in bits of the sub-packets contained by this packet
         length, input = removeChars(input, 15)
-        bits, input = parseSubWithLength(int(length, 2), input)
+        output, input = parseSubWithLength(int(length, 2), input)
     if length_type_id == '1':
         # the next 11 bits represent the number of sub-packets
         # immediately contained by this packet 
         num_sub_packets, input = removeChars(input, 11)
-        bits, input = parseSubWithPacketCount(int(num_sub_packets, 2), input)
-    return bits, input
+        output, input = parseSubWithPacketCount(int(num_sub_packets, 2), input)
+    return output, input
     
 def parsePacketString(input):
-    bits = ""
+# Every packet begins with a standard header:
+# the first three bits encode the packet version
+# the next three bits encode the packet type ID.
+
+    output = []
     packet, input = removeChars(input, 3)   
     packet_version = int(packet, 2)
-    bits += packet
     print(f"packet version: {packet_version}")
 
     # Packets type ID 4 represent a literal value
     packet, input = removeChars(input, 3)   
     packet_type = int(packet, 2)
-    bits += packet
     print(f"packet type: {packet_type}")
 
     if (packet_type == 4):
-        parse_bits, input = parseLiteral(input)
-        print(f"a literal: {int(parse_bits, 2)}")
+        output, input = parseLiteral(input)
+        print(f"a literal: {int(output, 2)}")
     else:
-        parse_bits, input = parseOperator(input)
-        print(f"an operator: {parse_bits}")
-        bits += parse_bits
+        output, input = parseOperator(input)
+        print(f"an operator: {output}")
 
-    return bits, input
+    return output, input
 
 demo_input_1 = "D2FE28"
 demo_true_1 = "110100101111111000101000"
@@ -263,22 +271,37 @@ assert(parseInput(demo_input_3) == demo_true_3)
 
 def makeItWork(input, inTrue=""):
     bin_string = parseInput(input)
-    print(f"input: {input}")
-    print(f"input: {bin_string}")
-    if len(inTrue) > 0:
-        print(f"true:  {inTrue}")
+    #print(f"input: {input}")
+    #print(f"input: {bin_string}")
+    #if len(inTrue) > 0:
+    #    print(f"true:  {inTrue}")
     result, leftover = parsePacketString(bin_string)
     print(f"result: {result}")
     print(f"leftover: {leftover}")
 
-makeItWork(demo_input_2, demo_true_2)
+makeItWork(demo_input_1)
+
+makeItWork("8A004A801A8002F478")
 
 file_name = "day_16_input.txt"
 with open(file_name) as f:
     file_input = f.readlines()
-real_input = []
-for line in file_input:
-    real_input.append(line[:-1])
+real_input = file_input[0][:-1]
+
+"8A004A801A8002F478" represents an operator packet (version 4) which contains an
+operator packet (version 1) which contains an operator packet (version 5) which
+contains a literal value (version 6); this packet has a version sum of 16.
+620080001611562C8802118E34 represents an operator packet (version 3) which
+contains two sub-packets; each sub-packet is an operator packet that contains
+two literal values. This packet has a version sum of 12.
+C0015000016115A2E0802F182340 has the same structure as the previous example,
+but the outermost packet uses a different length type ID. This packet has a
+version sum of 23. A0016C880162017C3686B18A3D4780 is an operator packet that
+contains an operator packet that contains an operator packet that contains five
+literal values; it has a version sum of 31. Decode the structure of your
+hexadecimal-encoded BITS transmission; what do you get if you add up the
+version numbers in all packets?
 
 
 
+makeItWork(demo_input_2, demo_true_2)
