@@ -184,9 +184,11 @@ class Probe:
                return True
         return False
     def __str__(self):
-        return f"x,y: {self.x},{self.y} velocity: {self.x_v},{self.y_v}"
+        return f"initial velocity (x, y): {self.initial_x_v}, {self.initial_y_v}\n" +\
+                f"(x, y): {self.x}, {self.y}\n" +\
+                f"velocity (x, y): {self.x_v}, {self.y_v}\n"
     def __repr__(self):
-        return f"x,y: {self.x},{self.y} velocity: {self.x_v},{self.y_v}"
+        return self.__str__()
 
     # We want the shot that goes the highest and ends up in target
     # step through return True if landed in target on a step
@@ -202,20 +204,20 @@ class Probe:
             self.steps.append([self.x, self.y])
             # it is in the target return true
             if self.in_target(top_left, target_bottom_right):
-                print(f"In target at {self.x}, {self.y}")
+                #print(f"In target at {self.x}, {self.y}")
                 return True
             # gone past the target
             if self.x > bottom_right[0]:
                 flying_correctly = False
-                print(f"past target on x")
+                #print(f"past target on x")
             # probe has stopped moving in x and has still not reached the target
             elif self.x_v == 0 and self.x < top_left[0]:
                 flying_correctly = False
-                print(f"fell short of target on x")
+                #print(f"fell short of target on x")
             # probe y is under target
             elif self.y < bottom_right[1]:
                 flying_correctly = False
-                print(f"probe y is under target")
+                #print(f"probe y is under target")
         
         return False
 
@@ -272,18 +274,37 @@ plot_map(steps)
 """
 
 hits = []
-for x in range(0, 10):
-    for y in range(0, 10):
+attempt_count = 0
+x_range_min = 0
+x_range_max = 11
+y_range_min = 0
+y_range_max = 11
+
+for x in range(x_range_min, x_range_max):
+    for y in range(y_range_min, y_range_max):
+        attempt_count += 1
         probe = Probe(x, y)
         in_target = probe.fire(target_top_left, target_bottom_right)
         if in_target:
             hits.append(probe)
 
+max_y = 0
+best_probe = None
 for probe in hits:
-    print()
-    print(f"Probe({probe.initial_x_v}, {probe.initial_y_v})")
-    print(f"{probe.steps[-1]}")
-    plot_map(probe.steps)
+    #print()
+    #print(f"Probe({probe.initial_x_v}, {probe.initial_y_v})")
+    #print(f"{probe.steps[-1]}")
+    #plot_map(probe.steps)
+    max_y_probe = np.array(probe.steps).max(axis=0)[1]
+    if max_y_probe > max_y:
+        max_y = max_y_probe
+        best_probe = probe
+
+print(f"\nOut of {attempt_count} attempts {len(hits)} probes hit the target.")
+print(f"Shooting velocities x: {x_range_min}-{x_range_max} y: {y_range_min}-{y_range_max}")
+print(f"max_y: {max_y}")
+print(f"best probe:\n{best_probe}")
+
 
 
 
