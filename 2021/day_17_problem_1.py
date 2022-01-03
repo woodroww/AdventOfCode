@@ -165,8 +165,11 @@ class Probe:
     def __init__(self, x_velocity, y_velocity):
         self.x = 0
         self.y = 0
+        self.initial_x_v = x_velocity
+        self.initial_y_v = y_velocity
         self.x_v = x_velocity
         self.y_v = y_velocity
+        self.steps = []
     def step(self):
         self.x += self.x_v
         self.y += self.y_v
@@ -185,38 +188,36 @@ class Probe:
     def __repr__(self):
         return f"x,y: {self.x},{self.y} velocity: {self.x_v},{self.y_v}"
 
-# We want the shot that goes the highest and ends up in target
+    # We want the shot that goes the highest and ends up in target
+    # step through return True if landed in target on a step
+    # return false if probe misses target
+    # return the probe point at each step
+    def fire(self, top_left, bottom_right):
 
-# step through return True if landed in target on a step
-# return false if probe misses target
-def fire_probe(probe):
+        flying_correctly = True
+        self.steps = [[probe.x, probe.y]]
 
-    flying_correctly = True
-    steps = [[probe.x, probe.y]]
-
-    while flying_correctly:
-
-        probe.step()
-        steps.append([probe.x, probe.y])
-
-        if probe.in_target(target_top_left, target_bottom_right):
-            print(f"In target at {probe.x}, {probe.y}")
-            return True, steps
+        while flying_correctly:
+            self.step()
+            self.steps.append([self.x, self.y])
+            # it is in the target return true
+            if self.in_target(top_left, target_bottom_right):
+                print(f"In target at {self.x}, {self.y}")
+                return True
+            # gone past the target
+            if self.x > bottom_right[0]:
+                flying_correctly = False
+                print(f"past target on x")
+            # probe has stopped moving in x and has still not reached the target
+            elif self.x_v == 0 and self.x < top_left[0]:
+                flying_correctly = False
+                print(f"fell short of target on x")
+            # probe y is under target
+            elif self.y < bottom_right[1]:
+                flying_correctly = False
+                print(f"probe y is under target")
         
-        # gone past the target
-        if probe.x > target_bottom_right[0]:
-            flying_correctly = False
-            print(f"past target on x")
-        # probe has stopped moving in x and has still not reached the target
-        elif probe.x_v == 0 and probe.x < target_top_left[0]:
-            flying_correctly = False
-            print(f"fell short of target on x")
-        # probe y is under target
-        elif probe.y < target_bottom_right[1]:
-            flying_correctly = False
-            print(f"probe y is under target")
-    
-    return False, steps
+        return False
 
 def point_is_target(x, y, top_left, bottom_right):
     if x >= top_left[0] and x <= bottom_right[0] and\
@@ -252,7 +253,7 @@ def plot_map(in_steps):
 print(f"Target:")
 print(f"{target_top_left[0]}, {target_top_left[1]}   {target_bottom_right[0]}, {target_top_left[1]}")
 print(f"{target_top_left[0]}, {target_bottom_right[1]}  {target_bottom_right[0]}, {target_bottom_right[1]}")
-
+"""
 probe = Probe(7, 2) # in target at 28, -7
 in_target, steps = fire_probe(probe)
 plot_map(steps)
@@ -268,6 +269,23 @@ plot_map(steps)
 probe = Probe(17,-4) # miss
 in_target, steps = fire_probe(probe)
 plot_map(steps)
+"""
+
+hits = []
+for x in range(0, 10):
+    for y in range(0, 10):
+        probe = Probe(x, y)
+        in_target = probe.fire(target_top_left, target_bottom_right)
+        if in_target:
+            hits.append(probe)
+
+for probe in hits:
+    print()
+    print(f"Probe({probe.initial_x_v}, {probe.initial_y_v})")
+    print(f"{probe.steps[-1]}")
+    plot_map(probe.steps)
+
+
 
 
 
