@@ -145,7 +145,7 @@ with open(file_name) as f:
 real_input = file_input[0][:-1]
 
 input_data = real_input
-input_data = demo_input
+#input_data = demo_input
 
 comma_split = input_data.split(", ")
 target_x_ranges = []
@@ -276,9 +276,9 @@ plot_map(steps)
 hits = []
 attempt_count = 0
 x_range_min = 0
-x_range_max = 11
+x_range_max = 200
 y_range_min = 0
-y_range_max = 11
+y_range_max = 300
 
 for x in range(x_range_min, x_range_max):
     for y in range(y_range_min, y_range_max):
