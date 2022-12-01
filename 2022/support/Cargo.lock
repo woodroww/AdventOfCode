@@ -624,6 +624,8 @@ name = "support"
 version = "0.1.0"
 dependencies = [
  "reqwest",
+ "serde_json",
+ "serde_urlencoded",
 ]
 
 [[package]]
