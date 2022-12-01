@@ -158,13 +158,10 @@ class Graph:
 
     def get_paths(self, start, end, path=[]):
         path = path + [start]
-
         if start == end:
             return [path]
-
         if start not in self.vertices:
             return []
-
         paths = []
         for node_tuple in self.vertices[start].neighbors:
             node = node_tuple[0]
@@ -172,7 +169,6 @@ class Graph:
                 new_paths = self.get_paths(node, end, path)
                 for p in new_paths:
                     paths.append(p)
-
         return paths
 
 # for the advent of code
@@ -180,32 +176,23 @@ class Graph:
 # visit small caves more than once per traversal
     def get_all_paths(self, start, end, path=[]):
         path = path + [start]
-        # print(f"{path}")
-
         if start == end:
             return [path]
-
         if start not in self.vertices:
             return []
-
         paths = []
-        
         # start at start and look at its neighbors
         for node_tuple in self.vertices[start].neighbors:
             node = node_tuple[0]
             #weight = node_tuple[1]
-
-
             # so if the node is not already in the path
             # this node not in path is the lowercase check
             # because it would be in path if we have visited
             # it and we can only do that once
-
             if node.isupper() or node not in path:
                 new_paths = self.get_all_paths(node, end, path)
                 for p in new_paths:
                     paths.append(p)
-
         return paths
 
 demo_input = [
