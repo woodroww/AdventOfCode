@@ -21,8 +21,6 @@ fn input_txt(use_example: bool) -> String {
     } else {
         fs::read_to_string("input.txt")
             .expect("No input.txt file")
-            .parse()
-            .expect("Couldn't parse file")
     }
 }
 
