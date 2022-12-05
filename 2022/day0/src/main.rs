@@ -27,8 +27,8 @@ fn input_txt(input: InputFile) -> String {
 
 fn main() {
     let input = input_txt(InputFile::Real);
-    println!("part 1 {}", part_1(input.clone()));
-    println!("part 2 {}", part_2(input));
+    println!("Part 1: {}", part_1(input.clone()));
+    println!("Part 2: {}", part_2(input));
 }
 
 #[cfg(test)]

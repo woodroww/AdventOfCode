@@ -5,7 +5,18 @@
 // 65 = A  char - 64 + 26 == char - 38
 // 90 = Z
 
-use std::{collections::HashSet, iter::FromIterator};
+use std::collections::HashSet;
+
+/*
+// pretty clever way to create a HashMap of letters to scores
+// not really necessary here
+// https://www.youtube.com/watch?v=yBJJYkC5cdk
+let letter_scores = ('a'..='z')
+    .chain('A'..='Z')
+    .enumerate()
+    .map(|(idx, c)| (c, idx + 1))
+    .collect::<HashMap<char, usize>>();
+*/
 
 fn char_to_value(c: u8) -> u32 {
     (if c < 91 { c - 38 } else { c - 96 }) as u32
@@ -31,12 +42,12 @@ fn part_1(input: String) -> u32 {
         .map(|c| char_to_value(c as u8))
         .collect();
 
-    //println!("{:?}", priorities);
-    let sum: u32 = priorities.into_iter().sum();
-    //println!("{} {} {}", &line[..mid], &line[mid..], common);
-    sum
+    priorities.into_iter().sum()
 }
 
+// This maybe is more idiomatic/functional,
+// but readabilty is poor for me and I wrote it.
+// part_2 original seems way clearer
 fn part_2_rusty(input: String) -> u32 {
     input
         .lines()
@@ -60,33 +71,30 @@ fn part_2_rusty(input: String) -> u32 {
 }
 
 fn part_2(input: String) -> u32 {
-    let mut common_letters: Vec<u32> = Vec::new();
+    let mut group_scores: Vec<u32> = Vec::new();
     let input: Vec<&str> = input.lines().collect();
 
     for group_lines in input.chunks(3) {
         let intersect = group_lines
-            .iter()
+            .into_iter()
             .map(|&elf_line| HashSet::from_iter(elf_line.chars()))
             .reduce(|acc: HashSet<char>, set| acc.intersection(&set).map(|c| *c).collect())
             .unwrap();
-
-        common_letters.push(char_to_value(intersect.into_iter().nth(0).unwrap() as u8));
+        group_scores.push(char_to_value(intersect.into_iter().nth(0).unwrap() as u8));
     }
-    common_letters.into_iter().sum()
+    group_scores.into_iter().sum()
 }
-
 
 fn main() {
     let input = input_txt(InputFile::Example);
     println!("part 1 {}", part_1(input.clone()));
     println!("part 2 {}", part_2(input.clone()));
-    println!("part 2 {}", part_2_rusty(input)); // 2616
+    println!("part 2 {}", part_2_rusty(input));
 
     let input = input_txt(InputFile::Real);
     println!("part 1 {}", part_1(input.clone())); // 7848
     println!("part 2 {}", part_2(input.clone())); // 2616
     println!("part 2 {}", part_2_rusty(input)); // 2616
-
 }
 
 enum InputFile {
