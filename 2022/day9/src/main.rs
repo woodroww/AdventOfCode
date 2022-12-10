@@ -9,6 +9,14 @@ struct Position {
     y: isize,
 }
 
+#[derive(Debug)]
+struct GridSize {
+    x: isize,
+    x_origin: isize,
+    y: isize,
+    y_origin: isize,
+}
+
 impl std::fmt::Display for Position {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}, {})", self.x, self.y)
@@ -38,34 +46,79 @@ fn part_1(input: String) -> usize {
             }
         };
 
-        if let Some(pos) = adjust_tail(&tail_pos, &head_pos, None) {
-            tail_pos = pos.clone();
-            tail_visits.insert(pos.clone());
+        if adjust_tail(&mut tail_pos, &head_pos) {
+            tail_visits.insert(tail_pos.clone());
         }
     }
 
     tail_visits.iter().count()
 }
 
-fn part_2(input: String) -> usize {
-    let mut tail_visits: HashSet<Position> = HashSet::new();
-    // head H is rope[0]
-    // tail 9 is rope[9]
-    let mut rope = vec![Position { x: 0, y: 0 }; 10];
-
-    tail_visits.insert(rope[9].clone());
-
-    let end = input
+fn total_move_count(input: &str) -> usize {
+    input
         .lines()
         .map(|line| line.split_once(" ").unwrap())
         .map(|(_direction, count)| count.parse::<usize>().unwrap())
-        .flat_map(|count| vec![0; count])
-        .count();
-    let inspect_move = (0..end).collect::<Vec<usize>>();
+        .fold(0, |acc, count| acc + count)
+}
 
- //   let inspect_move = (5..14).collect::<Vec<usize>>();
+fn grid_size(input: &str) -> GridSize {
+    let mut pos = Position { x: 0, y: 0 };
+    let mut max_pos = Position { x: 0, y: 0 }; 
+    let mut min_pos = Position { x: 0, y: 0 }; 
+    for (direction, count) in input.lines().map(|line| line.split_once(" ").unwrap()) {
+        match direction {
+            "U" => {
+                pos.y += count.parse::<isize>().unwrap();
+                if pos.y > max_pos.y {
+                    max_pos.y = pos.y;
+                }
+            }
+            "D" => {
+                pos.y -= count.parse::<isize>().unwrap();
+                if pos.y < min_pos.y {
+                    min_pos.y = pos.y;
+                }
+            }
+            "L" => {
+                pos.x -= count.parse::<isize>().unwrap();
+                if pos.x < min_pos.x {
+                    min_pos.x = pos.x;
+                }
+            }
+            "R" => {
+                pos.x += count.parse::<isize>().unwrap();
+                if pos.x > max_pos.x {
+                    max_pos.x = pos.x;
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
+    
+    GridSize {
+        x: max_pos.x - min_pos.x,
+        x_origin: -min_pos.x,
+        y: max_pos.y - min_pos.y,
+        y_origin: -min_pos.y,
+    }
+}
 
-    for (move_idx, direction) in input
+fn part_2(input: String) -> usize {
+    // where has the tail been
+    let mut tail_visits: HashSet<Position> = HashSet::new();
+    // head H is rope[0], tail 9 is rope[9]
+    let mut rope = vec![Position { x: 0, y: 0 }; 10];
+
+    // the tail starting position counts
+    tail_visits.insert(rope[9].clone());
+
+    //println!("total moves {}", total_move_count(&input));
+    println!("grid_size {:?}", grid_size(&input));
+    //let inspect_move = (0..total_move_count(&input)).collect::<Vec<usize>>();
+    //let inspect_move = (5..14).collect::<Vec<usize>>();
+
+    for (_move_idx, direction) in input
         .lines()
         .map(|line| line.split_once(" ").unwrap())
         .map(|(direction, count)| (direction, count.parse::<usize>().unwrap()))
@@ -83,34 +136,19 @@ fn part_2(input: String) -> usize {
         };
 
         let mut storage: Storage<&mut Position> = Storage::new(2);
-        let extra_rope = rope.clone();
         let windowed = rope.iter_mut().sliding_windows(&mut storage);
 
-        for (i, mut head_tail) in windowed.enumerate() {
+        for (_i, mut head_tail) in windowed.enumerate() {
             let mut rope_parts = head_tail.iter_mut();
             let head = rope_parts.next().unwrap();
             let tail = rope_parts.next().unwrap();
-            /*if inspect_move.contains(&move_idx) {
-                if let Some(pos) = adjust_tail(tail, head, Some(&extra_rope)) {
-                    **tail = pos;
-                }
-            } else {*/
-            if let Some(pos) = adjust_tail(tail, head, None) {
-                **tail = pos;
-            }
-            //}
+            adjust_tail(tail, head);
         }
-
+        // print_rope(&rope);
         tail_visits.insert(rope[9].clone());
-
-            /*
-        if inspect_move.contains(&move_idx) {
-            println!("{} {}", move_idx + 1, direction);
-            print_rope(&rope);
-            println!();
-        }*/
     }
 
+    println!("final head {}", rope[0]);
     tail_visits.iter().count()
 }
 
@@ -131,100 +169,46 @@ fn print_grid(head: &Position, tail: &Position, size_x: isize, size_y: isize) {
     }
 }
 
-fn adjust_tail(tail: &Position, head: &Position, rope: Option<&Vec<Position>>) -> Option<Position> {
+// cleaned up logic thanks to:
+// https://www.youtube.com/watch?v=D-ce_rFtfD8
 
-    let mut print_adjust = false; 
-    if let Some(rope) = rope {
-        print_adjust = true;
-        print!("head:{} tail:{}", head, tail);
-        print!(" diff: ({} {})", head.x - tail.x, head.y - tail.y);
+fn adjust_tail(tail: &mut Position, head: &Position) -> bool {
+    let x_diff = head.x - tail.x;
+    let y_diff = head.y - tail.y;
+    let mut tail_modified = false;
+
+    if x_diff.abs() >= 2 && y_diff.abs() >= 2 {
+        if tail.x < head.x {
+            tail.x = head.x - 1;
+        } else {
+            tail.x = head.x + 1;
+        }
+        if tail.y < head.y {
+            tail.y = head.y - 1;
+        } else {
+            tail.y = head.y + 1;
+        }
+        tail_modified = true;
+    } else if x_diff.abs() >= 2 {
+        if tail.x < head.x {
+            tail.x = head.x - 1;
+        } else {
+            tail.x = head.x + 1;
+        }
+        tail.y = head.y;
+        tail_modified = true;
+    } else if y_diff.abs() >= 2 {
+        tail.x = head.x;
+        if tail.y < head.y {
+            tail.y = head.y - 1;
+        } else {
+            tail.y = head.y + 1;
+        }
+        tail_modified = true;
     }
 
-    let mut new_tail = Position {
-        x: tail.x,
-        y: tail.y,
-    };
-    if tail.x == head.x {
-        if tail.y - head.y > 1 {
-            new_tail.y -= 1;
-        } else if head.y - tail.y > 1 {
-            new_tail.y += 1;
-        }
-    } else if tail.y == head.y {
-        if tail.x - head.x > 1 {
-            new_tail.x -= 1;
-        } else if head.x - tail.x > 1 {
-            new_tail.x += 1;
-        }
-    } else {
-
-        if (tail.y - head.y).abs() > 1 && (tail.x - head.x).abs() > 1 {
-            if tail.y - head.y > 1 {
-                if print_adjust == true {
-                    print!(" double diag A jam xdiff:{} ydiff{}", head.x - tail.x, head.y - tail.y);
-                }
-                new_tail.y -= 1;
-            }
-            if head.y - tail.y > 1 {
-                if print_adjust == true {
-                    print!(" double diag B jam xdiff:{} ydiff{}", head.x - tail.x, head.y - tail.y);
-                }
-                new_tail.y += 1;
-            }
-            if tail.x - head.x > 1 {
-                new_tail.x -= 1;
-            }
-            if head.x - tail.x > 1 {
-                new_tail.x += 1;
-            }
-
-
-        } else if (tail.y - head.y).abs() > 1 {
-            if tail.y - head.y > 1 {
-                if print_adjust == true {
-                    print!(" diag A xdiff{} ydiff{}", head.x - tail.x, head.y - tail.y);
-                }
-                new_tail.x += head.x - tail.x;
-                new_tail.y += (head.y - tail.y) + 1;
-            }
-            if head.y - tail.y > 1 {
-                if print_adjust == true {
-                    print!(" diag B xdiff{} ydiff{}", head.x - tail.x, head.y - tail.y);
-                }
-                new_tail.x += head.x - tail.x;
-                new_tail.y += (head.y - tail.y) - 1;
-            }
-        } else if (tail.x - head.x).abs() > 1 {
-            if tail.x - head.x > 1 {
-                if print_adjust == true {
-                    print!(" diag C xdiff{} ydiff{}", head.x - tail.x, head.y - tail.y);
-                }
-                new_tail.x += (head.x - tail.x) + 1;
-                new_tail.y += head.y - tail.y;
-            }
-            if head.x - tail.x > 1 {
-                if print_adjust == true {
-                    print!(" diag D xdiff{} ydiff{}", head.x - tail.x, head.y - tail.y);
-                }
-                new_tail.x += (head.x - tail.x) - 1;
-                new_tail.y += head.y - tail.y;
-            }
-        }
-    }
-
-    if tail.x != new_tail.x || tail.y != new_tail.y {
-        if print_adjust {
-            println!(" new tail:{}", new_tail);
-        }
-        Some(new_tail)
-    } else {
-        if print_adjust {
-            println!();
-        }
-        None
-    }
+    tail_modified
 }
-
 
 fn print_rope(rope: &Vec<Position>) {
     for (knot, head) in rope.iter().enumerate() {
