@@ -26,9 +26,13 @@ fn input_txt(input: InputFile) -> String {
 }
 
 fn main() {
-    let input = input_txt(InputFile::Real);
+    let input = input_txt(InputFile::Example);
     println!("Part 1: {}", part_1(input.clone()));
-    println!("Part 2: {}", part_2(input));
+    //println!("Part 2: {}", part_2(input));
+
+    //let input = input_txt(InputFile::Real);
+    //println!("Part 1: {}", part_1(input.clone()));
+    //println!("Part 2: {}", part_2(input));
 }
 
 #[cfg(test)]
@@ -36,19 +40,37 @@ mod tests {
 	use super::*;
     #[test]
     fn test_example_part_1() {
-        let part_1_example_answer = 1;
+        let answer = 1;
 
         let input = input_txt(InputFile::Example);
 		let result = part_1(input);
-        assert_eq!(result, part_1_example_answer);
+        assert_eq!(result, answer);
 	}
 
     #[test]
     fn test_example_part_2() {
-        let part_2_example_answer = 1;
+        let answer = 1;
 
         let input = input_txt(InputFile::Example);
 		let result = part_2(input);
-        assert_eq!(result, part_2_example_answer);
+        assert_eq!(result, answer);
+	}
+
+    #[test]
+    fn test_real_part_1() {
+        let answer = 1;
+
+        let input = input_txt(InputFile::Real);
+		let result = part_1(input);
+        assert_eq!(result, answer);
+	}
+
+    #[test]
+    fn test_real_part_2() {
+        let answer = 1;
+
+        let input = input_txt(InputFile::Real);
+		let result = part_2(input);
+        assert_eq!(result, answer);
 	}
 }
