@@ -4,7 +4,7 @@ use support::parse_year_day;
 fn download_input(year: u16, day: u16) -> String {
     let url = format!("https://adventofcode.com/{year}/day/{day}/input");
     let client = reqwest::blocking::Client::builder().build().unwrap();
-    let session_cookie = std::env::var("AOC_SESSION").unwrap();
+    let session_cookie = std::env::var("AOC_SESSION").expect("Environment variable not set, set AOC_SESSION to your cookie");
 
     let response = client
         .get(url)

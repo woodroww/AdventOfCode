@@ -1,0 +1,99 @@
+
+fn part_1(input: &str) -> String {
+    let mut register = 1;
+    let mut cycle = 1;
+    let mut instructions: Vec<isize> = Vec::new();
+    for line in input.lines() {
+        if line.starts_with("a") {
+            let (_, v) = line.rsplit_once(' ').unwrap();
+            instructions.push(0);
+            instructions.push(v.parse::<isize>().unwrap());
+        } else /* noop */ {
+            instructions.push(0);
+        }
+    }
+    let inspect_cycles = vec![20, 60, 100, 140, 180, 220];
+    let mut strength_sum = 0;
+    for (_i, instruction) in instructions.iter().enumerate() {
+        cycle += 1;
+        register += instruction;
+        if inspect_cycles.contains(&cycle) {
+            strength_sum += cycle * register;
+            println!("{} {}", cycle, cycle * register);
+        }
+    }
+
+    format!("{}", strength_sum)
+}
+
+fn part_2(input: String) -> i32 {
+    0
+}
+
+enum InputFile {
+    Example,
+    Real,
+}
+
+fn input_txt(input: InputFile) -> String {
+    match input {
+        InputFile::Example => {
+            std::fs::read_to_string("example.txt")
+                .expect("No example.txt file")
+        },
+        InputFile::Real => {
+            std::fs::read_to_string("input.txt")
+                .expect("No input.txt file")
+        },
+    }
+}
+
+fn main() {
+    let input = input_txt(InputFile::Example);
+    println!("Part 1: {}", part_1(&input));
+    //println!("Part 2: {}", part_2(input));
+
+    //let input = input_txt(InputFile::Real);
+    //println!("Part 1: {}", part_1(input.clone()));
+    //println!("Part 2: {}", part_2(input));
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+    #[test]
+    fn test_example_part_1() {
+        let answer = 1;
+
+        let input = input_txt(InputFile::Example);
+		let result = part_1(input);
+        assert_eq!(result, answer);
+	}
+
+    #[test]
+    fn test_example_part_2() {
+        let answer = 1;
+
+        let input = input_txt(InputFile::Example);
+		let result = part_2(input);
+        assert_eq!(result, answer);
+	}
+
+    #[test]
+    fn test_real_part_1() {
+        let answer = 1;
+
+        let input = input_txt(InputFile::Real);
+		let result = part_1(input);
+        assert_eq!(result, answer);
+	}
+
+    #[test]
+    fn test_real_part_2() {
+        let answer = 1;
+
+        let input = input_txt(InputFile::Real);
+		let result = part_2(input);
+        assert_eq!(result, answer);
+	}
+}
