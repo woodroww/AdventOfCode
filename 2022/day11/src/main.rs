@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{collections::VecDeque, str::FromStr};
 
 enum Second {
     Number(usize),
@@ -21,9 +21,7 @@ impl FromStr for Second {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
             "old" => Self::Old,
-            _ => {
-                Self::Number(s.parse::<usize>().unwrap())
-            }
+            _ => Self::Number(s.parse::<usize>().unwrap()),
         })
     }
 }
@@ -43,6 +41,29 @@ impl std::fmt::Display for Operation {
     }
 }
 
+impl Operation {
+    fn sentence_word(&self) -> String {
+        match self {
+            Self::Add => "increased",
+            Self::Multiply => "multiplied",
+        }
+        .to_string()
+    }
+
+    fn perform_operation(&self, lhs: usize, rhs: &Second) -> usize {
+        match self {
+            Operation::Add => match rhs {
+                Second::Number(n) => lhs + n,
+                Second::Old => lhs + lhs,
+            },
+            Operation::Multiply => match rhs {
+                Second::Number(n) => lhs * n,
+                Second::Old => lhs * lhs,
+            },
+        }
+    }
+}
+
 impl FromStr for Operation {
     type Err = anyhow::Error;
 
@@ -50,30 +71,43 @@ impl FromStr for Operation {
         Ok(match s {
             "*" => Self::Multiply,
             "+" => Self::Add,
-            _ => unreachable!()
+            _ => unreachable!(),
         })
     }
 }
 
 struct Monkey {
     number: usize,
-    items: Vec<usize>,
+    items: VecDeque<usize>,
     operation: Operation,
     second: Second,
     divisible_by: usize,
     true_monkey: usize,
     false_monkey: usize,
+    inspection_count: usize,
 }
 
 impl std::fmt::Display for Monkey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut result = format!("Monkey {}:", self.number);
         let items = format!("{:?}", self.items);
-        result.push_str(&format!("\n  Starting items: {}", &items[1..items.len() - 1]));
-        result.push_str(&format!("\n  Operation: new = old {} {}", self.operation, self.second));
+        result.push_str(&format!(
+            "\n  Starting items: {}",
+            &items[1..items.len() - 1]
+        ));
+        result.push_str(&format!(
+            "\n  Operation: new = old {} {}",
+            self.operation, self.second
+        ));
         result.push_str(&format!("\n  Test: divisible by {}", self.divisible_by));
-        result.push_str(&format!("\n    If true: throw to monkey {}", self.true_monkey));
-        result.push_str(&format!("\n    If false: throw to monkey {}", self.false_monkey));
+        result.push_str(&format!(
+            "\n    If true: throw to monkey {}",
+            self.true_monkey
+        ));
+        result.push_str(&format!(
+            "\n    If false: throw to monkey {}",
+            self.false_monkey
+        ));
         write!(f, "{}", result)
     }
 }
@@ -82,14 +116,18 @@ impl FromStr for Monkey {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let lines: Vec<&str> = s.lines().collect();
-        
+
         // Monkey #:
         let (_, number_str) = lines[0].split_once(" ").unwrap();
         let number = number_str[..number_str.len() - 1].parse::<usize>().unwrap();
 
         // Starting items:
         let item_str = lines[1].split_once(": ").unwrap().1;
-        let items = item_str.split(", ").map(|i| i.parse::<usize>().unwrap()).collect();
+        let items = item_str
+            .split(", ")
+            .map(|i| i.parse::<usize>().unwrap())
+            .collect::<VecDeque<usize>>();
+        //let items = items.iter().rev().map(|x| *x).collect();
 
         // Operation:
         let op_line: Vec<&str> = lines[2].split_whitespace().collect();
@@ -111,8 +149,49 @@ impl FromStr for Monkey {
             divisible_by,
             true_monkey,
             false_monkey,
+            inspection_count: 0,
         };
         Ok(monkey)
+    }
+}
+
+#[derive(Debug)]
+struct Throw {
+    to_monkey: usize,
+    worry: usize,
+}
+
+impl Monkey {
+    fn catch(&mut self, worry: usize) {
+        self.items.push_back(worry);
+    }
+
+    fn process_round(&mut self) -> Vec<Throw> {
+        let mut throws = Vec::new();
+        while let Some(mut worry) = self.items.pop_front() {
+            self.inspection_count += 1;
+            //println!("  Monkey inspects an item with a worry level of {}.", worry);
+            worry = self.operation.perform_operation(worry, &self.second);
+            //println!("    Worry level is {} by {} to {}", self.operation.sentence_word(), self.second, worry);
+            worry = worry / 3;
+            //println!("    Monkey gets bored with item. Worry level is divided by 3 to {}.", worry);
+            if worry % self.divisible_by == 0 {
+                //println!("    Current worry level is divisible by {}.", self.divisible_by);
+                throws.push(Throw {
+                    to_monkey: self.true_monkey,
+                    worry,
+                });
+                //println!("    Item with worry level {} is thrown to monkey {}.", worry, self.true_monkey);
+            } else {
+                //println!("    Current worry level is not divisible by {}.", self.divisible_by);
+                throws.push(Throw {
+                    to_monkey: self.false_monkey,
+                    worry,
+                });
+                //println!("    Item with worry level {} is thrown to monkey {}.", worry, self.false_monkey);
+            }
+        }
+        throws
     }
 }
 
@@ -122,9 +201,35 @@ fn part_1(input: &str) -> String {
         let m: Monkey = monkey.parse().unwrap();
         monkeys.push(m);
     }
+    /*println!("loaded monkeys:");
+    for m in &monkeys {
+        println!("Monkey {}: {:?}", m.number, m.items);
+    }*/
 
+    let mut throws = Vec::new();
+    for round in 0..20 {
+        for i in 0..monkeys.len() {
+            //println!("Monkey: {}", monkeys[i].number);
+            throws.extend(monkeys[i].process_round());
+            for throw in throws.drain(..) {
+                //println!("throw {:?}", throw);
+                monkeys[throw.to_monkey].catch(throw.worry);
+            }
+        }
+        /*println!("After round {}:", round + 1);
+        for m in &monkeys {
+            println!("Monkey {}: {:?}", m.number, m.items);
+        }*/
+    }
 
-    "".to_string()
+    monkeys.sort_by_key(|m| m.inspection_count);
+    let most_inspected: usize = monkeys
+        .iter()
+        .rev()
+        .take(2)
+        .map(|m| m.inspection_count)
+        .fold(1, |acc, count| acc * count);
+    format!("{}", most_inspected)
 }
 
 fn part_2(input: &str) -> String {
@@ -144,8 +249,8 @@ fn input_txt(input: InputFile) -> String {
 }
 
 fn main() {
-    let input = input_txt(InputFile::Example);
-    //let input = input_txt(InputFile::Real);
+    //let input = input_txt(InputFile::Example);
+    let input = input_txt(InputFile::Real);
 
     println!("Part 1: {}", part_1(&input));
     //println!("Part 2: {}", part_2(&input));
