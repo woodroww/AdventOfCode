@@ -127,7 +127,6 @@ impl FromStr for Monkey {
             .split(", ")
             .map(|i| i.parse::<usize>().unwrap())
             .collect::<VecDeque<usize>>();
-        //let items = items.iter().rev().map(|x| *x).collect();
 
         // Operation:
         let op_line: Vec<&str> = lines[2].split_whitespace().collect();
@@ -166,7 +165,7 @@ impl Monkey {
         self.items.push_back(worry);
     }
 
-    fn process_round(&mut self) -> Vec<Throw> {
+    fn process_round_part_1(&mut self) -> Vec<Throw> {
         let mut throws = Vec::new();
         while let Some(mut worry) = self.items.pop_front() {
             self.inspection_count += 1;
@@ -193,6 +192,27 @@ impl Monkey {
         }
         throws
     }
+
+    fn process_round_part_2(&mut self, product: usize) -> Vec<Throw> {
+        let mut throws = Vec::new();
+        while let Some(mut worry) = self.items.pop_front() {
+            self.inspection_count += 1;
+            worry = self.operation.perform_operation(worry, &self.second);
+            worry = worry % product;
+            if worry % self.divisible_by == 0 {
+                throws.push(Throw {
+                    to_monkey: self.true_monkey,
+                    worry,
+                });
+            } else {
+                throws.push(Throw {
+                    to_monkey: self.false_monkey,
+                    worry,
+                });
+            }
+        }
+        throws
+    }
 }
 
 fn part_1(input: &str) -> String {
@@ -210,7 +230,7 @@ fn part_1(input: &str) -> String {
     for round in 0..20 {
         for i in 0..monkeys.len() {
             //println!("Monkey: {}", monkeys[i].number);
-            throws.extend(monkeys[i].process_round());
+            throws.extend(monkeys[i].process_round_part_1());
             for throw in throws.drain(..) {
                 //println!("throw {:?}", throw);
                 monkeys[throw.to_monkey].catch(throw.worry);
@@ -233,7 +253,32 @@ fn part_1(input: &str) -> String {
 }
 
 fn part_2(input: &str) -> String {
-    "".to_string()
+    let mut monkeys = Vec::new();
+    for monkey in input.split("\n\n").collect::<Vec<&str>>() {
+        let m: Monkey = monkey.parse().unwrap();
+        monkeys.push(m);
+    }
+
+    // thanks reddit
+    let product = monkeys.iter().map(|m| m.divisible_by).product();
+
+    let mut throws = Vec::new();
+    for _round in 0..10_000 {
+        for i in 0..monkeys.len() {
+            throws.extend(monkeys[i].process_round_part_2(product));
+            for throw in throws.drain(..) {
+                monkeys[throw.to_monkey].catch(throw.worry);
+            }
+        }
+    }
+    monkeys.sort_by_key(|m| m.inspection_count);
+    let most_inspected: usize = monkeys
+        .iter()
+        .rev()
+        .take(2)
+        .map(|m| m.inspection_count)
+        .fold(1, |acc, count| acc * count);
+    format!("{}", most_inspected)
 }
 
 enum InputFile {
@@ -249,11 +294,11 @@ fn input_txt(input: InputFile) -> String {
 }
 
 fn main() {
-    //let input = input_txt(InputFile::Example);
     let input = input_txt(InputFile::Real);
+    //let input = input_txt(InputFile::Real);
 
-    println!("Part 1: {}", part_1(&input));
-    //println!("Part 2: {}", part_2(&input));
+    //println!("Part 1: {}", part_1(&input));
+    println!("Part 2: {}", part_2(&input));
 
     //println!("Part 1: {}", part_1(&input));
     //println!("Part 2: {}", part_2(&input));
@@ -266,27 +311,27 @@ mod tests {
     fn test_example_part_1() {
         let input = input_txt(InputFile::Example);
         let result = part_1(&input);
-        assert_eq!(result, "0");
+        assert_eq!(result, "10605");
     }
 
     #[test]
     fn test_example_part_2() {
         let input = input_txt(InputFile::Example);
         let result = part_2(&input);
-        assert_eq!(result, "0");
+        assert_eq!(result, "2713310158");
     }
 
     #[test]
     fn test_real_part_1() {
         let input = input_txt(InputFile::Real);
         let result = part_1(&input);
-        assert_eq!(result, "0");
+        assert_eq!(result, "58322");
     }
 
     #[test]
     fn test_real_part_2() {
         let input = input_txt(InputFile::Real);
         let result = part_2(&input);
-        assert_eq!(result, "0");
+        assert_eq!(result, "13937702909");
     }
 }
