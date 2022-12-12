@@ -259,7 +259,7 @@ fn part_2(input: &str) -> String {
         monkeys.push(m);
     }
 
-    // thanks reddit
+    // thanks reddit, Chinese remainder theorem
     let product = monkeys.iter().map(|m| m.divisible_by).product();
 
     let mut throws = Vec::new();

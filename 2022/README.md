@@ -9,6 +9,8 @@ This year I want to polish my Rust skills.
 get `session` cookie from aoc website after logging in
 set AOC_SESSION environment variable to the cookie
 
+
+
 in 2022 folder
 ln -s support/target/debug/download download
 

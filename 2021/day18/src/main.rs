@@ -23,7 +23,6 @@ fn main() {
     for (before, after) in examples {
         let result = process_line(before);
         let result = explode(&result);
-
     }
 }
 
