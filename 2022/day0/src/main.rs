@@ -7,6 +7,14 @@ fn part_2(input: &str) -> String {
     "".to_string()
 }
 
+fn main() {
+    let input = input_txt(InputFile::Example);
+    //let input = input_txt(InputFile::Real);
+
+    println!("Part 1: {}", part_1(&input));
+    //println!("Part 2: {}", part_2(&input));
+}
+
 enum InputFile {
     Example,
     Real,
@@ -23,16 +31,6 @@ fn input_txt(input: InputFile) -> String {
                 .expect("No input.txt file")
         },
     }
-}
-
-fn main() {
-    let input = input_txt(InputFile::Example);
-    println!("Part 1: {}", part_1(&input));
-    //println!("Part 2: {}", part_2(&input));
-
-    //let input = input_txt(InputFile::Real);
-    //println!("Part 1: {}", part_1(&input));
-    //println!("Part 2: {}", part_2(&input));
 }
 
 #[cfg(test)]
