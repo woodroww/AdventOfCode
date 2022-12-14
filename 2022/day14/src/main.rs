@@ -1,343 +1,139 @@
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-struct Position<T> {
-    x: T,
-    y: T,
-}
+use nannou::prelude::*;
 
-impl<T> Position<T> {
-    fn new(x: T, y: T) -> Self {
-        Self { x, y }
-    }
-}
-
-impl<T> std::fmt::Display for Position<T>
-where
-    T: std::fmt::Display,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({}, {})", self.x, self.y)
-    }
-}
-
-fn max_xy_min_xy(cave: &Vec<Position<usize>>) -> (usize, usize, usize, usize) {
-    let mut max_x = 0;
-    let mut min_x = usize::MAX;
-    let mut max_y = 0;
-    let mut min_y = usize::MAX;
-
-    for section in cave.iter() {
-        if section.x > max_x {
-            max_x = section.x;
-        }
-        if section.y > max_y {
-            max_y = section.y;
-        }
-        if section.x < min_x {
-            min_x = section.x;
-        }
-        if section.y < min_y {
-            min_y = section.y;
-        }
-    }
-
-    (max_x, max_y, min_x, min_y)
-}
-
-// a unit of sand is created at Position sand_spawner
-// sand travels and when at rest next unit is created
-
-enum CaveItem {
-    Sand,
-    Rock,
-    Air,
-}
-
-struct Cave {
-    things: Vec<Vec<CaveItem>>,
-    x_size: usize,
-    y_size: usize,
-    spawner: Position<usize>,
-    moving_sand: Option<Position<usize>>,
-}
-
-enum MoveType {
-    OffMap,
-    Blocked,
-    Resting,
-    MoveInto(Position<usize>),
-}
-
-impl Cave {
-
-    fn new(input: &str) -> Self {
-        let rocks = Cave::parse_rocks(input);
-        Cave::cave_from_rocks(rocks)
-    }
-
-    fn parse_rocks(input: &str) -> Vec<Position<usize>> {
-        let mut rocks = vec![];
-        for line in input.lines() {
-            for item in line.split(" ") {
-                if item != "->" {
-                    let (x, y) = item.split_once(",").unwrap();
-                    rocks.push(Position::new(
-                        x.parse::<usize>().unwrap(),
-                        y.parse::<usize>().unwrap(),
-                    ));
-                }
-            }
-        }
-        rocks
-    }
-
-    fn cave_from_rocks(rocks: Vec<Position<usize>>) -> Self {
-        let (max_x, max_y, min_x, _min_y) = max_xy_min_xy(&rocks);
-        let x_offset = min_x;
-        let sand_spawner = Position::new(500 - x_offset, 0);
-        let mut cave = Vec::new();
-        for _ in 0..=max_y {
-            let mut row: Vec<CaveItem> = Vec::new();
-            for _ in 0..=max_x - min_x {
-                row.push(CaveItem::Air);
-            }
-            cave.push(row);
-        }
-
-        for start_end in rocks.windows(2) {
-            let start = &start_end[0];
-            let end = &start_end[1];
-            if start.x == end.x {
-                let mut y_start = start.y;
-                let mut y_end = end.y;
-                if y_start > y_end {
-                    let tmp = y_start;
-                    y_start = y_end;
-                    y_end = tmp;
-                }
-                for y in y_start..=y_end {
-                    cave[y][start.x - x_offset] = CaveItem::Rock;
-                }
-            } else if start.y == end.y {
-                let mut x_start = start.x;
-                let mut x_end = end.x;
-                if x_start > x_end {
-                    let tmp = x_start;
-                    x_start = x_end;
-                    x_end = tmp;
-                }
-                for x in x_start..=x_end {
-                    cave[start.y][x - x_offset] = CaveItem::Rock;
-                }
-            }
-        }
-
-        Self {
-            things: cave,
-            spawner: sand_spawner,
-            x_size: max_x - min_x,
-            y_size: max_y,
-            moving_sand: None,
-        }
-    }
-
-    fn print_cave(&self) {
-        for (y, row) in self.things.iter().enumerate() {
-            for (x, item) in row.iter().enumerate() {
-                if let Some(mover) = self.moving_sand {
-                    if mover == (Position { x, y }) {
-                        print!("0");
-                    } else {
-                        match item {
-                            CaveItem::Sand => print!("o"),
-                            CaveItem::Rock => print!("#"),
-                            CaveItem::Air => print!("."),
-                        }
-                    }
-                } else {
-                    match item {
-                        CaveItem::Sand => print!("o"),
-                        CaveItem::Rock => print!("#"),
-                        CaveItem::Air => print!("."),
-                    }
-                }
-            }
-            println!();
-        }
-    }
-
-    fn is_free(&self, pos: &Position<usize>) -> MoveType {
-        if pos.y > self.y_size {
-            return MoveType::OffMap;
-        }
-        if pos.x > self.x_size {
-            return MoveType::OffMap;
-        }
-        if let CaveItem::Air = self.things[pos.y][pos.x] {
-            MoveType::MoveInto(Position::new(0, 0))
-        } else {
-            MoveType::Blocked
-        }
-    }
-
-    fn can_move_sand_at(&self, current: &Position<usize>) -> MoveType {
-        let down = Position {
-            x: current.x,
-            y: current.y + 1,
-        };
-        match self.is_free(&down) {
-            MoveType::OffMap => {
-                return MoveType::OffMap;
-            },
-            MoveType::MoveInto(_) => {
-                return MoveType::MoveInto(down);
-            },
-            _ => {}
-        }
-
-        if current.x > 0 {
-            let down_left = Position {
-                x: current.x - 1,
-                y: current.y + 1,
-            };
-            match self.is_free(&down_left) {
-                MoveType::OffMap => {
-                    return MoveType::OffMap;
-                },
-                MoveType::MoveInto(_) => {
-                    return MoveType::MoveInto(down_left);
-                },
-                MoveType::Resting | MoveType::Blocked => {}
-            }
-        } else {
-            return MoveType::OffMap;
-        }
-
-        let down_right = Position {
-            x: current.x + 1,
-            y: current.y + 1,
-        };
-        match self.is_free(&down_right) {
-            MoveType::OffMap => {
-                return MoveType::OffMap;
-            },
-            MoveType::MoveInto(_) => {
-                return MoveType::MoveInto(down_right);
-            },
-            MoveType::Resting | MoveType::Blocked => {}
-        }
-
-        MoveType::Resting
-    }
-
-    fn step(&mut self) -> MoveType { // should continue
-        let sand = self.moving_sand.unwrap();
-        let result = match self.can_move_sand_at(&sand) {
-            MoveType::OffMap => {
-                self.moving_sand = None;
-                MoveType::OffMap 
-            },
-            MoveType::MoveInto(pos) => {
-                self.moving_sand = Some(pos);
-                MoveType::MoveInto(pos)
-            },
-            MoveType::Blocked => {
-                unreachable!()
-            },
-            MoveType::Resting => {
-                self.things[sand.y][sand.x] = CaveItem::Sand;
-                self.moving_sand = None;
-                MoveType::Resting
-            },
-        };
-        result
-    }
-
-    fn spawn_sand_and_step(&mut self) -> bool { // should continue
-        let mut continue_loop = true;
-        while continue_loop == true {
-            if self.moving_sand.is_none() {
-                match self.can_move_sand_at(&self.spawner) {
-                    MoveType::MoveInto(new_move) => {
-                        self.moving_sand = Some(new_move);
-                    }
-                    _ => {}
-                }
-            }
-            match self.step() {
-                MoveType::OffMap => { return false; },
-                MoveType::Blocked => { unreachable!(); },
-                MoveType::Resting => { continue_loop = false; },
-                MoveType::MoveInto(_) => {},
-            }
-        }
-        true
-    }
-}
-
-
-fn part_1(input: &str) -> String {
-    let mut cave = Cave::new(input);
-    cave.print_cave();
-    println!();
-    let mut count = 0;
-    while cave.spawn_sand_and_step() {
-        count += 1;
-    }
-    cave.print_cave();
-    count.to_string()
-}
-
-fn part_2(input: &str) -> String {
-    "".to_string()
-}
+use day14::*;
 
 fn main() {
+    nannou::app(model).update(update).run();
+}
+
+struct Model {
+    _window: window::Id,
+    _input: String,
+    cave: Cave,
+    last_update: f32,
+    sand_moved: bool,
+    off_map: bool,
+    landed: usize,
+}
+
+impl Model {
+    fn new(window: window::Id) -> Self {
+        let input = input_txt(InputFile::Real);
+        let cave = Cave::new(&input);
+        Model {
+            _window: window,
+            _input: input,
+            cave,
+            last_update: 0.0,
+            sand_moved: true,
+            off_map: false,
+            landed: 0,
+        }
+    }
+}
+
+fn model(app: &App) -> Model {
+    // window: w:697, h:1382)
+    let _window = app.new_window().size(697, 1382).view(view).build().unwrap();
+    app.set_loop_mode(LoopMode::rate_fps(60.0));
+    Model::new(_window)
+}
+
+pub fn sand_step(cave: &mut Cave) -> MoveType {
+    if cave.moving_sand.is_none() {
+        match cave.can_move_sand_at(&cave.spawner) {
+            MoveType::MoveInto(new_move) => {
+                cave.moving_sand = Some(new_move);
+            }
+            _ => {}
+        }
+    }
+    cave.step()
+}
+
+fn update(app: &App, model: &mut Model, update: Update) {
+    //println!("since_last {}", update.since_last.as_millis());
+    let how_many = 15;
+    let mut count = 0;
+    while model.off_map == false && count < how_many {
+        match sand_step(&mut model.cave) {
+            MoveType::OffMap => {
+                model.off_map = true;
+                println!("landed: {}", model.landed);
+            }
+            MoveType::Blocked => {
+                unreachable!();
+            }
+            MoveType::Resting => {
+                model.landed += 1;
+            }
+            MoveType::MoveInto(_) => {
+                model.sand_moved = true;
+            }
+        }
+        count += 1;
+    }
+}
+
+fn view(app: &App, model: &Model, frame: Frame) {
+
+    let draw = app.draw();
+    draw.background().color(PLUM);
+
+    let window = app.window_rect();
+    let cols_count = model.cave.x_size + 1;
+    let rows_count = model.cave.y_size + 1;
+    
+    //let aspect_ratio = cols_count / rows_count;
+    //let window_aspect = window.w() / window.h();
+
+    let scale = if window.h() > window.w() {
+        window.w() / cols_count as f32
+    } else {
+        window.h() / rows_count as f32
+    };
+
+    let gdraw = draw
+        // scale from 1 pixel per unit (default) to SIZE pixels per unit
+        .scale(scale)
+        // flip y axis direction
+        .scale_y(-1.0)
+        // move the origin to top left of window
+        .x_y(
+            cols_count as f32 / -2.0 + 0.5,
+            rows_count as f32 / -2.0 + 0.5,
+        );
+
+    let falling_sand = model.cave.moving_sand;
+
+    for y in 0..rows_count {
+        for x in 0..cols_count {
+            // center coordinates at the current square
+            let cdraw = gdraw.x_y(x as f32, y as f32);
+            if falling_sand.is_some() && falling_sand.unwrap() == (Position { x, y }) {
+                cdraw.rect().color(SANDYBROWN).w_h(1.0, 1.0);
+            } else {
+                match model.cave.things[y][x] {
+                    CaveItem::Sand => {
+                        cdraw.rect().color(GOLDENROD).w_h(1.0, 1.0);
+                    }
+                    CaveItem::Rock => {
+                        cdraw.rect().color(SADDLEBROWN).w_h(1.0, 1.0);
+                    }
+                    CaveItem::Air => {
+                        cdraw.rect().color(DARKBLUE).w_h(1.0, 1.0);
+                    }
+                }
+            }
+        }
+    }
+
+    draw.to_frame(app, &frame).unwrap();
+}
+
+/*fn main() {
     //let input = input_txt(InputFile::Example);
     let input = input_txt(InputFile::Real);
     println!("Part 1: {}", part_1(&input)); // 530 too low
     //println!("Part 2: {}", part_2(&input));
-}
-
-enum InputFile {
-    Example,
-    Real,
-}
-
-fn input_txt(input: InputFile) -> String {
-    match input {
-        InputFile::Example => std::fs::read_to_string("example.txt").expect("No example.txt file"),
-        InputFile::Real => std::fs::read_to_string("input.txt").expect("No input.txt file"),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn test_example_part_1() {
-        let input = input_txt(InputFile::Example);
-        let result = part_1(&input);
-        assert_eq!(result, "0");
-    }
-
-    #[test]
-    fn test_example_part_2() {
-        let input = input_txt(InputFile::Example);
-        let result = part_2(&input);
-        assert_eq!(result, "0");
-    }
-
-    #[test]
-    fn test_real_part_1() {
-        let input = input_txt(InputFile::Real);
-        let result = part_1(&input);
-        assert_eq!(result, "0");
-    }
-
-    #[test]
-    fn test_real_part_2() {
-        let input = input_txt(InputFile::Real);
-        let result = part_2(&input);
-        assert_eq!(result, "0");
-    }
-}
+}*/
