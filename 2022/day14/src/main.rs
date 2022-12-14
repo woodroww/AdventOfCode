@@ -1,4 +1,4 @@
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct Position<T> {
     x: T,
     y: T,
@@ -18,7 +18,6 @@ where
         write!(f, "({}, {})", self.x, self.y)
     }
 }
-
 
 fn max_xy_min_xy(cave: &Vec<Position<usize>>) -> (usize, usize, usize, usize) {
     let mut max_x = 0;
@@ -50,18 +49,51 @@ fn max_xy_min_xy(cave: &Vec<Position<usize>>) -> (usize, usize, usize, usize) {
 enum CaveItem {
     Sand,
     Rock,
-    Air
+    Air,
 }
 
 struct Cave {
     things: Vec<Vec<CaveItem>>,
+    x_size: usize,
+    y_size: usize,
+    spawner: Position<usize>,
+    moving_sand: Option<Position<usize>>,
+}
+
+enum MoveType {
+    OffMap,
+    Blocked,
+    Resting,
+    MoveInto(Position<usize>),
 }
 
 impl Cave {
-    fn new(rocks: Vec<Position<usize>>) -> Self {
+
+    fn new(input: &str) -> Self {
+        let rocks = Cave::parse_rocks(input);
+        Cave::cave_from_rocks(rocks)
+    }
+
+    fn parse_rocks(input: &str) -> Vec<Position<usize>> {
+        let mut rocks = vec![];
+        for line in input.lines() {
+            for item in line.split(" ") {
+                if item != "->" {
+                    let (x, y) = item.split_once(",").unwrap();
+                    rocks.push(Position::new(
+                        x.parse::<usize>().unwrap(),
+                        y.parse::<usize>().unwrap(),
+                    ));
+                }
+            }
+        }
+        rocks
+    }
+
+    fn cave_from_rocks(rocks: Vec<Position<usize>>) -> Self {
         let (max_x, max_y, min_x, _min_y) = max_xy_min_xy(&rocks);
         let x_offset = min_x;
-        //let sand_spawner = Position::new(500 - min_x, 0);
+        let sand_spawner = Position::new(500 - x_offset, 0);
         let mut cave = Vec::new();
         for _ in 0..=max_y {
             let mut row: Vec<CaveItem> = Vec::new();
@@ -82,7 +114,7 @@ impl Cave {
                     y_start = y_end;
                     y_end = tmp;
                 }
-                for y in start.y..=end.y {
+                for y in y_start..=y_end {
                     cave[y][start.x - x_offset] = CaveItem::Rock;
                 }
             } else if start.y == end.y {
@@ -94,48 +126,165 @@ impl Cave {
                     x_end = tmp;
                 }
                 for x in x_start..=x_end {
-                    dbg!(x - x_offset);
                     cave[start.y][x - x_offset] = CaveItem::Rock;
                 }
             }
         }
-        
-        Self { things: cave }
+
+        Self {
+            things: cave,
+            spawner: sand_spawner,
+            x_size: max_x - min_x,
+            y_size: max_y,
+            moving_sand: None,
+        }
     }
 
     fn print_cave(&self) {
-        for row in self.things.iter() {
-            for item in row {
-                match item {
-                    CaveItem::Sand => print!("o"),
-                    CaveItem::Rock => print!("#"),
-                    CaveItem::Air => print!("."),
+        for (y, row) in self.things.iter().enumerate() {
+            for (x, item) in row.iter().enumerate() {
+                if let Some(mover) = self.moving_sand {
+                    if mover == (Position { x, y }) {
+                        print!("0");
+                    } else {
+                        match item {
+                            CaveItem::Sand => print!("o"),
+                            CaveItem::Rock => print!("#"),
+                            CaveItem::Air => print!("."),
+                        }
+                    }
+                } else {
+                    match item {
+                        CaveItem::Sand => print!("o"),
+                        CaveItem::Rock => print!("#"),
+                        CaveItem::Air => print!("."),
+                    }
                 }
             }
             println!();
         }
     }
-}
 
-fn parse_rocks(input: &str) -> Vec<Position<usize>> {
-    let mut rocks = vec![];
-    for line in input.lines() {
-        for item in line.split(" ") {
-            if item != "->" {
-                let (x, y) = item.split_once(",").unwrap();
-                rocks.push(Position::new(x.parse::<usize>().unwrap(), y.parse::<usize>().unwrap()));
-            }
+    fn is_free(&self, pos: &Position<usize>) -> MoveType {
+        if pos.y > self.y_size {
+            return MoveType::OffMap;
+        }
+        if pos.x > self.x_size {
+            return MoveType::OffMap;
+        }
+        if let CaveItem::Air = self.things[pos.y][pos.x] {
+            MoveType::MoveInto(Position::new(0, 0))
+        } else {
+            MoveType::Blocked
         }
     }
-    rocks 
+
+    fn can_move_sand_at(&self, current: &Position<usize>) -> MoveType {
+        let down = Position {
+            x: current.x,
+            y: current.y + 1,
+        };
+        match self.is_free(&down) {
+            MoveType::OffMap => {
+                return MoveType::OffMap;
+            },
+            MoveType::MoveInto(_) => {
+                return MoveType::MoveInto(down);
+            },
+            _ => {}
+        }
+
+        if current.x > 0 {
+            let down_left = Position {
+                x: current.x - 1,
+                y: current.y + 1,
+            };
+            match self.is_free(&down_left) {
+                MoveType::OffMap => {
+                    return MoveType::OffMap;
+                },
+                MoveType::MoveInto(_) => {
+                    return MoveType::MoveInto(down_left);
+                },
+                MoveType::Resting | MoveType::Blocked => {}
+            }
+        } else {
+            return MoveType::OffMap;
+        }
+
+        let down_right = Position {
+            x: current.x + 1,
+            y: current.y + 1,
+        };
+        match self.is_free(&down_right) {
+            MoveType::OffMap => {
+                return MoveType::OffMap;
+            },
+            MoveType::MoveInto(_) => {
+                return MoveType::MoveInto(down_right);
+            },
+            MoveType::Resting | MoveType::Blocked => {}
+        }
+
+        MoveType::Resting
+    }
+
+    fn step(&mut self) -> MoveType { // should continue
+        let sand = self.moving_sand.unwrap();
+        let result = match self.can_move_sand_at(&sand) {
+            MoveType::OffMap => {
+                self.moving_sand = None;
+                MoveType::OffMap 
+            },
+            MoveType::MoveInto(pos) => {
+                self.moving_sand = Some(pos);
+                MoveType::MoveInto(pos)
+            },
+            MoveType::Blocked => {
+                unreachable!()
+            },
+            MoveType::Resting => {
+                self.things[sand.y][sand.x] = CaveItem::Sand;
+                self.moving_sand = None;
+                MoveType::Resting
+            },
+        };
+        result
+    }
+
+    fn spawn_sand_and_step(&mut self) -> bool { // should continue
+        let mut continue_loop = true;
+        while continue_loop == true {
+            if self.moving_sand.is_none() {
+                match self.can_move_sand_at(&self.spawner) {
+                    MoveType::MoveInto(new_move) => {
+                        self.moving_sand = Some(new_move);
+                    }
+                    _ => {}
+                }
+            }
+            match self.step() {
+                MoveType::OffMap => { return false; },
+                MoveType::Blocked => { unreachable!(); },
+                MoveType::Resting => { continue_loop = false; },
+                MoveType::MoveInto(_) => {},
+            }
+        }
+        true
+    }
 }
 
-fn part_1(input: &str) -> String {
-    let rocks = parse_rocks(input);
-    let cave = Cave::new(rocks);
-    cave.print_cave();
 
-    "".to_string()
+fn part_1(input: &str) -> String {
+    let mut cave = Cave::new(input);
+    cave.print_cave();
+    println!();
+    let mut count = 0;
+    while cave.spawn_sand_and_step() {
+        count += 1;
+    }
+    cave.print_cave();
+    count.to_string()
 }
 
 fn part_2(input: &str) -> String {
@@ -145,7 +294,7 @@ fn part_2(input: &str) -> String {
 fn main() {
     //let input = input_txt(InputFile::Example);
     let input = input_txt(InputFile::Real);
-    println!("Part 1: {}", part_1(&input));
+    println!("Part 1: {}", part_1(&input)); // 530 too low
     //println!("Part 2: {}", part_2(&input));
 }
 
