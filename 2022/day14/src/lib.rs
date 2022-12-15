@@ -74,9 +74,10 @@ impl Cave {
         Cave::cave_from_rocks(rocks)
     }
 
-    fn parse_rocks(input: &str) -> Vec<Position<usize>> {
-        let mut rocks = vec![];
+    fn parse_rocks(input: &str) -> Vec<Vec<Position<usize>>> {
+        let mut rock_lines = vec![];
         for line in input.lines() {
+            let mut rocks = vec![];
             for item in line.split(" ") {
                 if item != "->" {
                     let (x, y) = item.split_once(",").unwrap();
@@ -86,12 +87,24 @@ impl Cave {
                     ));
                 }
             }
+            rock_lines.push(rocks);
         }
-        rocks
+        rock_lines 
     }
 
-    fn cave_from_rocks(rocks: Vec<Position<usize>>) -> Self {
-        let (max_x, max_y, min_x, _min_y) = max_xy_min_xy(&rocks);
+    fn cave_from_rocks(rocks_lines: Vec<Vec<Position<usize>>>) -> Self {
+        let mut max_x = 0;
+        let mut max_y = 0;
+        let mut min_x = usize::MAX;
+        let mut min_y = usize::MAX;
+        for line in &rocks_lines {
+            let (line_max_x, line_max_y, line_min_x, line_min_y) = max_xy_min_xy(&line);
+            max_x = max_x.max(line_max_x);
+            max_y = max_y.max(line_max_y);
+            min_x = min_x.min(line_min_x);
+            min_y = min_y.min(line_min_y);
+        }
+
         let x_offset = min_x;
         let sand_spawner = Position::new(500 - x_offset, 0);
         let mut cave = Vec::new();
@@ -103,30 +116,18 @@ impl Cave {
             cave.push(row);
         }
 
-        for start_end in rocks.windows(2) {
-            let start = &start_end[0];
-            let end = &start_end[1];
-            if start.x == end.x {
-                let mut y_start = start.y;
-                let mut y_end = end.y;
-                if y_start > y_end {
-                    let tmp = y_start;
-                    y_start = y_end;
-                    y_end = tmp;
-                }
-                for y in y_start..=y_end {
-                    cave[y][start.x - x_offset] = CaveItem::Rock;
-                }
-            } else if start.y == end.y {
-                let mut x_start = start.x;
-                let mut x_end = end.x;
-                if x_start > x_end {
-                    let tmp = x_start;
-                    x_start = x_end;
-                    x_end = tmp;
-                }
-                for x in x_start..=x_end {
-                    cave[start.y][x - x_offset] = CaveItem::Rock;
+        for rocks in rocks_lines {
+            for start_end in rocks.windows(2) {
+                let start = &start_end[0];
+                let end = &start_end[1];
+                if start.x == end.x {
+                    for y in start.y.min(end.y)..=start.y.max(end.y) {
+                        cave[y][start.x - x_offset] = CaveItem::Rock;
+                    }
+                } else if start.y == end.y {
+                    for x in start.x.min(end.x)..=start.x.max(end.x) {
+                        cave[start.y][x - x_offset] = CaveItem::Rock;
+                    }
                 }
             }
         }
@@ -229,7 +230,7 @@ impl Cave {
         MoveType::Resting
     }
 
-    pub fn step(&mut self) -> MoveType { // should continue
+    pub fn step(&mut self) -> MoveType {
         let sand = self.moving_sand.unwrap();
         let result = match self.can_move_sand_at(&sand) {
             MoveType::OffMap => {
@@ -317,7 +318,7 @@ mod tests {
     fn test_example_part_1() {
         let input = input_txt(InputFile::Example);
         let result = part_1(&input);
-        assert_eq!(result, "0");
+        assert_eq!(result, "24");
     }
 
     #[test]
@@ -331,7 +332,7 @@ mod tests {
     fn test_real_part_1() {
         let input = input_txt(InputFile::Real);
         let result = part_1(&input);
-        assert_eq!(result, "0");
+        assert_eq!(result, "578");
     }
 
     #[test]
