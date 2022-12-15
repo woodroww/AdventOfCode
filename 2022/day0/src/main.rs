@@ -15,12 +15,12 @@ fn main() {
     //println!("Part 2: {}", part_2(&input));
 }
 
-enum InputFile {
+pub enum InputFile {
     Example,
     Real,
 }
 
-fn input_txt(input: InputFile) -> String {
+pub fn input_txt(input: InputFile) -> String {
     match input {
         InputFile::Example => {
             std::fs::read_to_string("example.txt")
@@ -37,28 +37,28 @@ fn input_txt(input: InputFile) -> String {
 mod tests {
 	use super::*;
     #[test]
-    fn test_example_part_1() {
+    fn example_part_1() {
         let input = input_txt(InputFile::Example);
 		let result = part_1(&input);
         assert_eq!(result, "0");
 	}
 
     #[test]
-    fn test_example_part_2() {
+    fn example_part_2() {
         let input = input_txt(InputFile::Example);
 		let result = part_2(&input);
         assert_eq!(result, "0");
 	}
 
     #[test]
-    fn test_real_part_1() {
+    fn real_part_1() {
         let input = input_txt(InputFile::Real);
 		let result = part_1(&input);
         assert_eq!(result, "0");
 	}
 
     #[test]
-    fn test_real_part_2() {
+    fn real_part_2() {
         let input = input_txt(InputFile::Real);
 		let result = part_2(&input);
         assert_eq!(result, "0");
