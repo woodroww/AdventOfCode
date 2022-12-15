@@ -69,12 +69,12 @@ pub enum MoveType {
 
 impl Cave {
 
-    pub fn new(input: &str) -> Self {
-        let rocks = Cave::parse_rocks(input);
+    pub fn new(input: &str, part_2: bool) -> Self {
+        let rocks = Cave::parse_rocks(input, part_2);
         Cave::cave_from_rocks(rocks)
     }
 
-    fn parse_rocks(input: &str) -> Vec<Vec<Position<usize>>> {
+    fn parse_rocks(input: &str, part_2: bool) -> Vec<Vec<Position<usize>>> {
         let mut rock_lines = vec![];
         for line in input.lines() {
             let mut rocks = vec![];
@@ -89,21 +89,35 @@ impl Cave {
             }
             rock_lines.push(rocks);
         }
+
+        if part_2 {
+            let (max_x, max_y, min_x, min_y) = Cave::max_from_rocks_lines(&rock_lines);
+            let mut rocks = vec![];
+            rocks.push(Position::new(min_x - 2 * (max_x - min_x), max_y + 2));
+            rocks.push(Position::new(max_x + 2 * (max_x - min_x), max_y + 2));
+            rock_lines.push(rocks);
+        }
+
         rock_lines 
     }
 
-    fn cave_from_rocks(rocks_lines: Vec<Vec<Position<usize>>>) -> Self {
+    fn max_from_rocks_lines(rock_lines: &Vec<Vec<Position<usize>>>) -> (usize, usize, usize, usize) {
         let mut max_x = 0;
         let mut max_y = 0;
         let mut min_x = usize::MAX;
         let mut min_y = usize::MAX;
-        for line in &rocks_lines {
+        for line in rock_lines.iter() {
             let (line_max_x, line_max_y, line_min_x, line_min_y) = max_xy_min_xy(&line);
             max_x = max_x.max(line_max_x);
             max_y = max_y.max(line_max_y);
             min_x = min_x.min(line_min_x);
             min_y = min_y.min(line_min_y);
         }
+        (max_x, max_y, min_x, min_y)
+    }
+
+    fn cave_from_rocks(rock_lines: Vec<Vec<Position<usize>>>) -> Self {
+        let (max_x, max_y, min_x, min_y) = Cave::max_from_rocks_lines(&rock_lines);
 
         let x_offset = min_x;
         let sand_spawner = Position::new(500 - x_offset, 0);
@@ -116,7 +130,7 @@ impl Cave {
             cave.push(row);
         }
 
-        for rocks in rocks_lines {
+        for rocks in rock_lines {
             for start_end in rocks.windows(2) {
                 let start = &start_end[0];
                 let end = &start_end[1];
@@ -176,11 +190,18 @@ impl Cave {
         if let CaveItem::Air = self.things[pos.y][pos.x] {
             MoveType::MoveInto(Position::new(0, 0))
         } else {
-            MoveType::Blocked
+            if pos.x == self.spawner.x && pos.y == self.spawner.y {
+                MoveType::Blocked
+            } else {
+                MoveType::Resting
+            }
         }
     }
 
     pub fn can_move_sand_at(&self, current: &Position<usize>) -> MoveType {
+        if let CaveItem::Sand = self.things[current.y][current.x] {
+            return MoveType::Blocked;
+        }
         let down = Position {
             x: current.x,
             y: current.y + 1,
@@ -192,7 +213,10 @@ impl Cave {
             MoveType::MoveInto(_) => {
                 return MoveType::MoveInto(down);
             },
-            _ => {}
+            MoveType::Blocked => {
+                return MoveType::Blocked;
+            }
+            MoveType::Resting => {}
         }
 
         if current.x > 0 {
@@ -207,7 +231,10 @@ impl Cave {
                 MoveType::MoveInto(_) => {
                     return MoveType::MoveInto(down_left);
                 },
-                MoveType::Resting | MoveType::Blocked => {}
+                MoveType::Resting => {}
+                MoveType::Blocked => {
+                    return MoveType::Blocked;
+                }
             }
         } else {
             return MoveType::OffMap;
@@ -224,7 +251,10 @@ impl Cave {
             MoveType::MoveInto(_) => {
                 return MoveType::MoveInto(down_right);
             },
-            MoveType::Resting | MoveType::Blocked => {}
+            MoveType::Resting => {}
+            MoveType::Blocked => {
+                return MoveType::Blocked;
+            }
         }
 
         MoveType::Resting
@@ -242,7 +272,8 @@ impl Cave {
                 MoveType::MoveInto(pos)
             },
             MoveType::Blocked => {
-                unreachable!()
+                self.things[sand.y][sand.x] = CaveItem::Sand;
+                MoveType::Blocked 
             },
             MoveType::Resting => {
                 self.things[sand.y][sand.x] = CaveItem::Sand;
@@ -257,18 +288,17 @@ impl Cave {
         let mut continue_loop = true;
         while continue_loop == true {
             if self.moving_sand.is_none() {
-                match self.can_move_sand_at(&self.spawner) {
+                self.moving_sand = Some(self.spawner);
+            }
+            if self.moving_sand.is_some() {
+                match self.step() {
+                    MoveType::OffMap => { return false; },
+                    MoveType::Blocked => { return false; },
+                    MoveType::Resting => { continue_loop = false; },
                     MoveType::MoveInto(new_move) => {
                         self.moving_sand = Some(new_move);
                     }
-                    _ => {}
                 }
-            }
-            match self.step() {
-                MoveType::OffMap => { return false; },
-                MoveType::Blocked => { unreachable!(); },
-                MoveType::Resting => { continue_loop = false; },
-                MoveType::MoveInto(_) => {},
             }
         }
         true
@@ -276,28 +306,29 @@ impl Cave {
 }
 
 
-fn part_1(input: &str) -> String {
-    let mut cave = Cave::new(input);
-    cave.print_cave();
-    println!();
+pub fn part_1(input: &str) -> String {
+    let mut cave = Cave::new(input, false);
+    //cave.print_cave();
+    //println!();
     let mut count = 0;
     while cave.spawn_sand_and_step() {
         count += 1;
     }
-    cave.print_cave();
+    //cave.print_cave();
     count.to_string()
 }
 
-fn part_2(input: &str) -> String {
-    "".to_string()
+pub fn part_2(input: &str) -> String {
+    let mut cave = Cave::new(input, true);
+    let mut count = 0;
+    //cave.print_cave();
+    println!();
+    while cave.spawn_sand_and_step() {
+        count += 1;
+    }
+    //cave.print_cave();
+    count.to_string()
 }
-
-/*fn main() {
-    //let input = input_txt(InputFile::Example);
-    let input = input_txt(InputFile::Real);
-    println!("Part 1: {}", part_1(&input)); // 530 too low
-    //println!("Part 2: {}", part_2(&input));
-}*/
 
 pub enum InputFile {
     Example,
@@ -325,7 +356,7 @@ mod tests {
     fn test_example_part_2() {
         let input = input_txt(InputFile::Example);
         let result = part_2(&input);
-        assert_eq!(result, "0");
+        assert_eq!(result, "93");
     }
 
     #[test]
@@ -339,6 +370,6 @@ mod tests {
     fn test_real_part_2() {
         let input = input_txt(InputFile::Real);
         let result = part_2(&input);
-        assert_eq!(result, "0");
+        assert_eq!(result, "24377");
     }
 }
