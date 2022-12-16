@@ -1,14 +1,5 @@
 use std::collections::HashMap;
 
-struct Valve {
-    name: String,
-    flow_rate: usize,
-}
-
-struct ValveLayout {
-    valve_map: HashMap<String, Vec<String>>,
-    flows: HashMap<String, usize>,
-}
 
 impl std::fmt::Display for ValveLayout {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -50,10 +41,45 @@ fn parse_input(input: &str) -> ValveLayout {
     }
 }
 
-fn part_1(input: &str) -> String {
-    let what = parse_input(input);
+fn minute() {
+    let mut total_pressure_released = 0;
+    let open_valves: HashMap<String, usize> = HashMap::new();
+    for (_valve, flow) in open_valves.iter() {
+        total_pressure_released += flow;
+    }
 
-    println!("{:#}", what);
+}
+
+struct ValveLayout {
+    valve_map: HashMap<String, Vec<String>>,
+    flows: HashMap<String, usize>,
+}
+
+fn graph_viz_string(layout: &ValveLayout) -> String {
+    let mut vis_ids: HashMap<String, usize> = HashMap::new();
+    let mut vis_string = String::new();
+    for (i, (valve, _leads_to)) in layout.valve_map.iter().enumerate() {
+        vis_ids.insert(valve.to_string(), i);
+        vis_string.push_str(&format!("{} [ label = \"{}\" ]\n", i, valve));
+    }
+    for (valve, leads_to) in layout.valve_map.iter() {
+        let valve_id = vis_ids.get(valve).unwrap();
+        for lead in leads_to.iter() {
+            let lead_id = vis_ids.get(lead).unwrap();
+            vis_string.push_str(&format!("{} -- {} [ ]\n", valve_id, lead_id));
+        }
+    }
+    vis_string
+}
+
+fn part_1(input: &str) -> String {
+    let layout = parse_input(input);
+    for _ in 0..30 {
+        minute();
+    }
+    let vis_string = graph_viz_string(&layout);
+    println!("{}", vis_string);
+
     "".to_string()
 }
 
@@ -62,8 +88,8 @@ fn part_2(input: &str) -> String {
 }
 
 fn main() {
-    let input = input_txt(InputFile::Example);
-    //let input = input_txt(InputFile::Real);
+    //let input = input_txt(InputFile::Example);
+    let input = input_txt(InputFile::Real);
 
     println!("Part 1: {}", part_1(&input));
     //println!("Part 2: {}", part_2(&input));

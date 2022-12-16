@@ -1,4 +1,5 @@
 // nom parsing from https://youtu.be/QVubj-UfmEU
+
 use nom::character::complete::u32 as nom_u32;
 use nom::{
     branch::alt,
@@ -15,6 +16,30 @@ enum Packet {
     List(Vec<Packet>),
     Number(u32),
 }
+
+// Any type that implements Ord must also implement Eq and PartialOrd
+// PartialEq is required to implement Eq
+
+impl Ord for Packet {
+    fn cmp(&self, other: &Self) -> Ordering {
+        are_ordered(self, other)
+    }
+}
+
+impl PartialOrd for Packet {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Packet {
+    fn eq(&self, _other: &Self) -> bool {
+        false
+    }
+}
+
+impl Eq for Packet { }
+
 
 impl Packet {
     fn display_string(&self) -> String {
@@ -153,12 +178,19 @@ fn part_1(input: &str) -> String {
 }
 
 fn part_2(input: &str) -> String {
-    "".to_string()
+    let (_, pair_list) = pairs(input).unwrap();
+    let mut packets = pair_list.into_iter().flat_map(|pair| vec![pair.left, pair.right]).collect::<Vec<_>>();
+    packets.push(Packet::List( vec![Packet::List(vec![Packet::Number(2)])]));
+    packets.push(Packet::List( vec![Packet::List(vec![Packet::Number(6)])]));
+    packets.sort();
+    let divider_idx_1 = packets.iter().position(|p| p.display_string() == "[[2]]").unwrap();
+    let divider_idx_2 = packets.iter().position(|p| p.display_string() == "[[6]]").unwrap();
+    ((divider_idx_1 + 1) * (divider_idx_2 + 1)).to_string()
 }
 
 fn main() {
-    let input = input_txt(InputFile::Example);
-    //let input = input_txt(InputFile::Real);
+    //let input = input_txt(InputFile::Example);
+    let input = input_txt(InputFile::Real);
     println!("\nPart 1: {}", part_1(&input));
     println!("Part 2: {}", part_2(&input));
 }
@@ -197,7 +229,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn example_part_2() {
         let input = input_txt(InputFile::Example);
         let result = part_2(&input);
@@ -212,10 +243,9 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn real_part_2() {
         let input = input_txt(InputFile::Real);
         let result = part_2(&input);
-        assert_eq!(result, "0");
+        assert_eq!(result, "29025");
     }
 }
