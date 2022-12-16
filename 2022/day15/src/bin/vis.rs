@@ -141,7 +141,7 @@ fn my_solution(model: &mut Model) {
     }
 }
 
-fn mouse_clicked(_app: &App, model: &mut Model, button: Button) {
+fn mouse_clicked(_app: &App, model: &mut Model, _button: Button) {
     my_solution(model);
     /*
     if let Some(cell) = model.mouse_cell {
@@ -180,7 +180,7 @@ fn model(app: &App) -> Model {
     Model::new(_window)
 }
 
-fn update(_app: &App, model: &mut Model, _update: Update) {
+fn update(_app: &App, _model: &mut Model, _update: Update) {
     //println!("since_last {}", update.since_last.as_millis());
 }
 
@@ -194,9 +194,9 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let pix_per_col = window.w() / col_count as f32;
     let pix_per_row = window.h() / row_count as f32;
 
-    let mouse_beacon_color = Srgb::new(224u8, 16, 162);
+    let _mouse_beacon_color = Srgb::new(224u8, 16, 162);
     let beacon_highlight = Srgb::new(250u8, 102, 206);
-    let mouse_sensor_color = Srgb::new(143u8, 63, 47);
+    let _mouse_sensor_color = Srgb::new(143u8, 63, 47);
     let sensor_highlight = Srgb::new(227u8, 136, 118);
 
     //println!("{}", model.rect);

@@ -180,7 +180,7 @@ pub fn set_for_sensor(sensor: &Sensor, grid: &Rectangle) -> HashSet<Position<isi
 }
 
 // https://github.com/jarshwah/advent-of-code/blob/main/python/2022/q15.py
-fn part_1(input: &str, row: isize) -> String {
+pub fn part_1(input: &str, row: isize) -> String {
     let sensors = parse_input(input);
     let mut count_map = HashSet::new();
     for sensor in sensors.iter() {
@@ -271,7 +271,7 @@ fn part_1x(input: &str, row: isize) -> String {
     unavailable.to_string()
 }
 
-fn part_2(input: &str) -> String {
+pub fn part_2(_input: &str) -> String {
     "".to_string()
 }
 
