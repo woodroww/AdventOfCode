@@ -1,10 +1,11 @@
 [package]
-name = "day0"
-default-run = "day0"
+name = "day17"
 version = "0.1.0"
 edition = "2021"
+default-run = "day17"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+colored = "2.0.0"
 #nannou = "0.18.1"
