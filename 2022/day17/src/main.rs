@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use colored::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Shape {
     width: usize,
     height: usize,
@@ -10,14 +10,54 @@ struct Shape {
     shape: Vec<Vec<bool>>,
 }
 
+const LAST_INDEX_RIGHT: usize = 6;
+
 impl Shape {
 
     fn move_down(&mut self) {
         self.bottom -= 1;
     }
 
+    fn right(&self) -> usize {
+        self.left + (self.width - 1)
+    }
+
+    fn take_push(&mut self, dir: char) {
+        match dir {
+            '>' => {
+                if self.right() < LAST_INDEX_RIGHT {
+                    self.left += 1;
+                }
+            }
+            '<' => {
+                if self.left > 0 {
+                    self.left -= 1;
+                }
+            }
+            _ => {
+                panic!("invalid char in input")
+            }
+        }
+    }
+
     fn hits_floor(&self, floor: &StopLine) -> bool {
-        self.bottom == 0
+        let floor_height = *floor.line.iter().max().unwrap();
+        if self.bottom <= floor_height + 1 {
+            for (i, floor_height) in floor.line.iter().enumerate() {
+                if i >= self.left && i <= self.left + (self.width - 1) {
+
+                    if self.bottom == 0 {
+                        panic!("{:#?}\nfloor_height:{}", self, floor_height);
+                    }
+                    if self.shape[self.bottom - 1][i - self.left] == true {
+                        return true;
+                    }
+                }
+            }
+            false
+        } else {
+            false
+        }
     }
 
     fn contains_point(&self, x: usize, y: usize) -> bool {
@@ -197,33 +237,65 @@ fn spawn_shape(key: &str, map: &HashMap<String, Shape>) -> Shape {
 }
 
 fn part_1(input: &str) -> String {
+
+
     let floor = StopLine::new();
     let shapes = make_shapes();
 
-    /*
-    for s in ["-", "+", "|", "s", "L"] {
+    /*for s in ["-", "+", "L", "|", "s"] {
         let mut shape = spawn_shape(s, &shapes);
         shape.bottom = floor.height() + 4;
         println!("shape: {}", s);
-        floor.print_floor(&shape);
-        println!();
-    }
-    */
 
-    let mut shape = spawn_shape("-", &shapes);
-    shape.bottom = floor.height() + 4;
-    let mut shape_moving = true;
-    let mut count = 0;
-    while shape_moving && count < 5 {
-        shape.move_down();
-        if shape.hits_floor(&floor) {
-            shape_moving = false;
+        let mut shape_moving = true;
+        let mut count = 0;
+        while shape_moving && count < 5 {
+            if shape.hits_floor(&floor) {
+                shape_moving = false;
+            } else {
+                shape.move_down();
+            }
+            floor.print_floor(&shape);
+            count += 1;
         }
-        floor.print_floor(&shape);
-        count += 1;
-    }
+    }*/
 
-    //shape.bottom -= 1;
+    let mut pushes = input.trim_end().chars().peekable();
+
+    for s in ["-", "+", "L", "|", "s"].iter().cycle() {
+        let mut shape = spawn_shape(s, &shapes);
+        shape.bottom = floor.height() + 4;
+
+        println!("\nA new rock begins falling:");
+        floor.print_floor(&shape);
+
+        while let Some(push) = pushes.next() {
+            match push {
+                '>' => {
+                    println!("\nJet of gas pushes rock right:");
+                    shape.take_push(push);
+                }
+                '<' => {
+                    println!("\nJet of gas pushes rock left:");
+                    shape.take_push(push);
+                }
+                _ => panic!("invalid char in input"),
+            }
+            floor.print_floor(&shape);
+            if !shape.hits_floor(&floor) {
+                shape.move_down();
+                println!("\nRock falls 1 unit:");
+                floor.print_floor(&shape);
+            } else {
+                break;
+            }
+        }
+        println!("\nRock falls 1 unit, causing it to come to rest:");
+        floor.print_floor(&shape);
+        if pushes.peek().is_none() {
+            break;
+        }
+    }
 
     "".to_string()
 }
