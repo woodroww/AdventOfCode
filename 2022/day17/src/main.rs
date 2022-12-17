@@ -7,7 +7,7 @@ struct Shape {
     height: usize,
     bottom: usize,
     left: usize,
-    shape: Vec<Vec<bool>>,
+    data: Vec<Vec<bool>>,
 }
 
 const LAST_INDEX_RIGHT: usize = 6;
@@ -22,7 +22,8 @@ impl Shape {
         self.left + (self.width - 1)
     }
 
-    fn take_push(&mut self, dir: char) {
+    fn take_push(&mut self, dir: char) -> bool { // bool moved if true
+        let before = self.left;
         match dir {
             '>' => {
                 if self.right() < LAST_INDEX_RIGHT {
@@ -38,6 +39,7 @@ impl Shape {
                 panic!("invalid char in input")
             }
         }
+        before != self.left
     }
 
     fn hits_floor(&self, floor: &StopLine) -> bool {
@@ -49,7 +51,16 @@ impl Shape {
                     if self.bottom == 0 {
                         panic!("{:#?}\nfloor_height:{}", self, floor_height);
                     }
-                    if self.shape[self.bottom - 1][i - self.left] == true {
+                    let shape_row = 0;
+                    let shape_col = i - self.left;
+                    if shape_row >= self.data.len() {
+                        panic!("{:#?}\nfloor_height:{}", self, floor_height);
+                    }
+                    if shape_col >= self.data[shape_row].len() {
+                        panic!("{:#?}\nfloor_height:{}", self, floor_height);
+                    }
+
+                    if self.data[shape_row][shape_col] == true {
                         return true;
                     }
                 }
@@ -66,7 +77,7 @@ impl Shape {
                 //println!("{} y pass test", y);
                 let col = x - self.left;
                 let row = y - self.bottom;
-                if self.shape[row][col] == true {
+                if self.data[row][col] == true {
                     return true;
                 }
             }
@@ -84,7 +95,7 @@ impl Shape {
             height,
             bottom: 0 + (height - 1),
             left: 2,
-            shape,
+            data: shape,
         }
     }
 
@@ -102,7 +113,7 @@ impl Shape {
             height,
             bottom: 0 + (height - 1),
             left: 2,
-            shape,
+            data: shape,
         }
     }
 
@@ -120,7 +131,7 @@ impl Shape {
             height,
             bottom: 0 + (height - 1),
             left: 2,
-            shape,
+            data: shape,
         }
     }
 
@@ -140,7 +151,7 @@ impl Shape {
             height: 4,
             bottom: 0 + (height - 1),
             left: 2,
-            shape,
+            data: shape,
         }
     }
 
@@ -156,7 +167,7 @@ impl Shape {
             height: 2,
             bottom: 0 + (height - 1),
             left: 2,
-            shape,
+            data: shape,
         }
     }
 }
@@ -181,41 +192,57 @@ impl StopLine {
     fn height(&self) -> usize {
         *self.line.iter().max().unwrap()
     }
-    /*
-+-------+
-|..####.|
 
-+-------+
-|..####.|
-|...@...|
-|..@@@..|
-|...@...|
-    */
-    fn fit_shape(&mut self, shape: &Shape) {
-        // if shape.bottom (which is really the top) is 1 away, or next to
-        // check to see where the shape can move
-        if shape.bottom - self.line.iter().max().unwrap() == 1 {
+    fn absorb_rock(&mut self, shape: &Shape) {
+        for (i, col) in self.line.iter_mut().enumerate() {
+            //println!("left:{}, right:{}", shape.left, shape.right());
+            if i >= shape.left && i <= shape.right() {
+                let shape_col = i - shape.left;
+                let shape_row_count = shape.data.len();
+                let mut highest = 0;
+                for (r, shape_line) in shape.data.iter().rev().enumerate() {
+                    if shape_line[shape_col] == true {
+                        if highest < r + 1 {
+                            highest = r + 1;
+                        }
+                    }
+                }
+                *col += highest;
+            }
         }
     }
 
     fn print_floor(&self, shape: &Shape) {
-        let floor: [usize; 7] = [0, 0, 0, 0, 0, 0, 0];
-        let max_height = floor.iter().max().unwrap();
-        let last_draw_line = 8;
+        let max_height = self.line.iter().max().unwrap();
+        let last_draw_line = shape.bottom + shape.height;
         for row in (0..last_draw_line).rev() { // plus 1 to draw floor at 0
             if row < 10 {
                 print!("{}  ", row);
             } else {
                 print!("{} ", row);
             }
-            for col in 0..floor.len() {
+            if row == 0 {
+                print!("{}", "+".blue());
+            } else {
+                print!("{}", "|".blue());
+            }
+            for col in 0..self.line.len() {
                 if shape.contains_point(col, row) {
-                    print!("{}", format!("{}", "#".yellow()));
-                } else if floor[col] >= row {
-                    print!("{}", format!("{}", "#".red()));
+                    print!("{}", format!("{}", "@".yellow()));
+                } else if self.line[col] >= row {
+                    if row == 0 {
+                        print!("{}", "-".blue());
+                    } else {
+                        print!("{}", "#".red());
+                    }
                 } else {
-                    print!("{}", format!("{}", ".".blue()));
+                    print!("{}", ".".blue());
                 }
+            }
+            if row == 0 {
+                print!("{}", "+".blue());
+            } else {
+                print!("{}", "|".blue());
             }
             println!(" {}", last_draw_line - row - 1);
         }
@@ -236,12 +263,6 @@ fn spawn_shape(key: &str, map: &HashMap<String, Shape>) -> Shape {
     map.get(key).unwrap().clone()
 }
 
-fn part_1(input: &str) -> String {
-
-
-    let floor = StopLine::new();
-    let shapes = make_shapes();
-
     /*for s in ["-", "+", "L", "|", "s"] {
         let mut shape = spawn_shape(s, &shapes);
         shape.bottom = floor.height() + 4;
@@ -260,6 +281,9 @@ fn part_1(input: &str) -> String {
         }
     }*/
 
+fn part_1(input: &str) -> String {
+    let mut floor = StopLine::new();
+    let shapes = make_shapes();
     let mut pushes = input.trim_end().chars().peekable();
 
     for s in ["-", "+", "L", "|", "s"].iter().cycle() {
@@ -270,16 +294,22 @@ fn part_1(input: &str) -> String {
         floor.print_floor(&shape);
 
         while let Some(push) = pushes.next() {
+            let moved;
             match push {
                 '>' => {
-                    println!("\nJet of gas pushes rock right:");
-                    shape.take_push(push);
+                    print!("\nJet of gas pushes rock right");
+                    moved = shape.take_push(push);
                 }
                 '<' => {
-                    println!("\nJet of gas pushes rock left:");
-                    shape.take_push(push);
+                    print!("\nJet of gas pushes rock left");
+                    moved = shape.take_push(push);
                 }
                 _ => panic!("invalid char in input"),
+            }
+            if moved {
+                println!(":");
+            } else {
+                println!(", but nothing happens:");
             }
             floor.print_floor(&shape);
             if !shape.hits_floor(&floor) {
@@ -287,6 +317,7 @@ fn part_1(input: &str) -> String {
                 println!("\nRock falls 1 unit:");
                 floor.print_floor(&shape);
             } else {
+                floor.absorb_rock(&shape);
                 break;
             }
         }
