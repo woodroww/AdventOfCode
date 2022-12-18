@@ -44,16 +44,16 @@ mod tests {
 	}
 
     #[test]
-    fn example_part_2() {
-        let input = input_txt(InputFile::Example);
-		let result = part_2(&input);
+    fn real_part_1() {
+        let input = input_txt(InputFile::Real);
+		let result = part_1(&input);
         assert_eq!(result, "0");
 	}
 
     #[test]
-    fn real_part_1() {
-        let input = input_txt(InputFile::Real);
-		let result = part_1(&input);
+    fn example_part_2() {
+        let input = input_txt(InputFile::Example);
+		let result = part_2(&input);
         assert_eq!(result, "0");
 	}
 
