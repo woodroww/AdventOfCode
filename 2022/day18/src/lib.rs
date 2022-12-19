@@ -1,10 +1,22 @@
 use std::collections::HashSet;
 
-#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone)]
 pub struct Point3D {
     pub x: usize,
     pub y: usize,
     pub z: usize,
+}
+
+impl std::fmt::Display for Point3D {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({},{},{})", self.x, self.y, self.z)
+    }
+}
+
+impl std::fmt::Debug for Point3D {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({},{},{})", self.x, self.y, self.z)
+    }
 }
 
 pub fn parse_cubes(input: &str) -> HashSet<Point3D> {
@@ -96,20 +108,25 @@ pub fn part_2(input: &str) -> String {
     println!("max {} {} {}", max_x, max_y, max_z);
 
     let point = Point3D { x: 0, y: 0, z: 0 };
-    let spaces = fill_outside(&cubes, point, max_x + 1, max_y + 1, max_z + 1);
-    let count = find_surface(&cubes, &spaces);
-    println!("outside spaces {}", spaces.len());
-    let count = find_surface(&cubes, &spaces);
-    
-    println!("count  {}", count);
+    let spaces = fill_outside(&cubes, point, max_x + 2, max_y + 2, max_z + 2);
+    let (touch_cubes, touch_empties)  = find_touching(&cubes, &spaces);
 
+    let mut count = 0;
+    for cube in touch_cubes.iter() {
+        let neighbors = cardinal_3d(&cube, max_x + 2, max_y + 2, max_z + 2);
+        for n in neighbors.iter() {
+            if touch_empties.contains(n) {
+                count += 1;
+            }
+        }
+    }
     count.to_string()
 }
 
-fn find_surface(
+pub fn find_touching(
     cubes: &HashSet<Point3D>,
     spaces: &HashSet<Point3D>,
-) -> usize {
+) -> (HashSet<Point3D>, HashSet<Point3D>) {
     let (max_x, max_y, max_z) = max_xyz(&cubes);
     let (min_x, min_y, min_z) = min_xyz(&cubes);
     let mut touching_cubes = HashSet::new();
@@ -133,8 +150,7 @@ fn find_surface(
             }
         }
     }
-
-    count
+    (touching_cubes, touching_empty)
 }
 
 pub fn fill_outside(
@@ -180,8 +196,8 @@ pub fn cardinal_directions_3d(
 ) -> Vec<(usize, usize, usize)> {
     let mut dirs: Vec<(usize, usize, usize)> = Vec::new();
     let two_d = cardinal_directions(x, y, x_bound, y_bound);
-    let positive_z = z.checked_sub(1);
-    let negative_z = match z.checked_add(1) {
+    let neg_z = z.checked_sub(1);
+    let pos_z = match z.checked_add(1) {
         Some(z) => {
             if z < z_bound {
                 Some(z)
@@ -194,10 +210,10 @@ pub fn cardinal_directions_3d(
     for (x, y) in two_d {
         dirs.push((x, y, z));
     }
-    if let Some(z) = positive_z {
+    if let Some(z) = neg_z {
         dirs.push((x, y, z));
     }
-    if let Some(z) = negative_z {
+    if let Some(z) = pos_z {
         dirs.push((x, y, z));
     }
     dirs
@@ -269,6 +285,6 @@ mod tests {
     fn real_part_2() {
         let input = input_txt(InputFile::Real);
         let result = part_2(&input);
-        assert_eq!(result, "0");
+        assert_eq!(result, "2028");
     }
 }

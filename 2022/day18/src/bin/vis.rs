@@ -7,6 +7,7 @@ use bevy_inspector_egui::WorldInspectorPlugin;
 use bevy_mod_picking::*;
 use day18::{
     cardinal_3d, center, fill_outside, input_txt, max_xyz, parse_cubes, InputFile, Point3D,
+    find_touching,
 };
 
 fn main() {
@@ -21,14 +22,15 @@ fn main() {
             },
             ..default()
         }))
-        .add_plugin(WorldInspectorPlugin::new())
+        //.add_plugin(WorldInspectorPlugin::new())
         .add_plugins(DefaultPickingPlugins)
         .add_startup_system_to_stage(StartupStage::PreStartup, load_assets)
         .add_startup_system(spawn_axis)
         .add_startup_system(spawn_camera)
         .add_startup_system(spawn_cubes)
+        .add_system(keyboard_input)
         .add_system(cube_click)
-        .add_system(animate_fill)
+        //.add_system(animate_fill)
         .add_system(pan_orbit_camera)
         .run();
 }
@@ -41,6 +43,8 @@ pub struct BoulderAssets {
     max_x: usize,
     max_y: usize,
     max_z: usize,
+    touch_cubes: HashSet<Point3D>,
+    touch_empties: HashSet<Point3D>,
 }
 
 #[derive(Component)]
@@ -68,17 +72,20 @@ fn load_assets(mut commands: Commands, assets: Res<AssetServer>) {
         .collect();
 
     let (max_x, max_y, max_z) = max_xyz(&cubes);
-    /*println!("maxs {} {} {}", max_x, max_y, max_z);
+    println!("maxs {} {} {}", max_x, max_y, max_z);
     let empties = fill_outside(
         &cubes,
         Point3D { x: 0, y: 0, z: 0 },
-        max_x,
-        max_y,
-        max_z,
-    );*/
+        max_x + 2,
+        max_y + 2,
+        max_z + 2,
+    );
+
+    let (touch_cubes, touch_empties)  = find_touching(&cubes, &empties);
+
     let mut fill_stack = Vec::new();
     fill_stack.push(Point3D { x: 0, y: 0, z: 0 });
-    let empties = HashSet::new();
+
     commands.insert_resource(BoulderAssets {
         cubes,
         empties,
@@ -86,7 +93,10 @@ fn load_assets(mut commands: Commands, assets: Res<AssetServer>) {
         max_y: max_y + 2,
         max_z: max_z + 2,
         fill_stack,
+        touch_cubes,
+        touch_empties,
     });
+
 }
 
 pub fn animate_fill(
@@ -103,14 +113,14 @@ pub fn animate_fill(
                 let transform = Transform::from_xyz(p.x as f32, p.y as f32, p.z as f32);
                 commands
                     .spawn(PbrBundle {
-                        mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-                        material: materials.add(Color::rgba(0.3, 0.3, 0.9, 0.2).into()),
+                        mesh: meshes.add(Mesh::from(shape::Icosphere { radius: 0.10, subdivisions: 4 })),
+                        material: materials.add(Color::rgb(0.3, 0.3, 0.9).into()),
                         transform,
                         ..default()
                     })
                     .insert(NotShadowCaster)
                     //.insert(PickableBundle::default())
-                    .insert(BoulderCube { location: p });
+                    .insert(BoulderEmpty { location: p });
                 let neighbors = cardinal_3d(&p, assets.max_x, assets.max_y, assets.max_z);
                 assets.fill_stack.extend_from_slice(&neighbors);
             }
@@ -125,17 +135,64 @@ fn spawn_cubes(
     assets: Res<BoulderAssets>,
 ) {
     for cube in assets.cubes.iter() {
-        let transform = Transform::from_xyz(cube.x as f32, cube.y as f32, cube.z as f32);
+        if !assets.touch_cubes.contains(cube) {
+            let transform = Transform::from_xyz(cube.x as f32, cube.y as f32, cube.z as f32);
+            commands
+                .spawn(PbrBundle {
+                    mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+                    material: materials.add(Color::rgb(0.9, 0.3, 0.3).into()),
+                    transform,
+                    ..default()
+                })
+                .insert(PickableBundle::default())
+                .insert(BoulderCube { location: *cube });
+        }
+    }
+
+    for empty in assets.empties.iter() {
+        if !assets.touch_empties.contains(empty) {
+            let transform = Transform::from_xyz(empty.x as f32, empty.y as f32, empty.z as f32);
+            commands
+                .spawn(PbrBundle {
+                    mesh: meshes.add(Mesh::from(shape::Icosphere { radius: 0.04, subdivisions: 4 })),
+                    material: materials.add(Color::rgb(0.3, 0.3, 0.9).into()),
+                    transform,
+                    ..default()
+                })
+                .insert(NotShadowCaster)
+                //.insert(PickableBundle::default())
+                .insert(BoulderEmpty { location: *empty });
+        }
+    }
+
+    for touch_empty in assets.touch_empties.iter() {
+        let transform = Transform::from_xyz(touch_empty.x as f32, touch_empty.y as f32, touch_empty.z as f32);
         commands
             .spawn(PbrBundle {
-                mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-                material: materials.add(Color::rgb(0.9, 0.3, 0.3).into()),
+                mesh: meshes.add(Mesh::from(shape::Cube { size: 0.4 })),
+                material: materials.add(Color::rgb(0.3, 0.9, 0.3).into()),
                 transform,
                 ..default()
             })
+            .insert(NotShadowCaster)
             .insert(PickableBundle::default())
-            .insert(BoulderCube { location: *cube });
+            .insert(BoulderCube { location: *touch_empty });
     }
+
+    for touch_cube in assets.touch_cubes.iter() {
+        let transform = Transform::from_xyz(touch_cube.x as f32, touch_cube.y as f32, touch_cube.z as f32);
+        commands
+            .spawn(PbrBundle {
+                mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+                material: materials.add(Color::rgb_u8(214, 224, 18).into()),
+                transform,
+                ..default()
+            })
+            .insert(NotShadowCaster)
+            .insert(PickableBundle::default())
+            .insert(BoulderCube { location: *touch_cube });
+    }
+
 }
 
 fn cube_click(selection: Query<(&BoulderCube, &Selection)>) {
@@ -146,13 +203,24 @@ fn cube_click(selection: Query<(&BoulderCube, &Selection)>) {
     }
 }
 
+fn keyboard_input(input: Res<Input<KeyCode>>, mut query: Query<(&MattsAxis, &mut Visibility)>) {
+    if input.just_pressed(KeyCode::A) {
+        for (_axis, mut visibility) in query.iter_mut() {
+            visibility.toggle();
+        }
+    }
+}
+
+#[derive(Component)]
+struct MattsAxis;
+
 fn spawn_axis(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let length = 20.0;
-    let width = 0.25;
+    let width = 0.1;
     //let x = Box::new(x_length, y_length, z_length);
     let x = shape::Box::new(length, width, width);
     let y = shape::Box::new(width, length, width);
@@ -168,6 +236,7 @@ fn spawn_axis(
             ..default()
         },
         NotShadowCaster,
+        MattsAxis,
     ));
     let mut transform = Transform::default();
     transform.translation.y = length / 2.0;
@@ -179,6 +248,7 @@ fn spawn_axis(
             ..default()
         },
         NotShadowCaster,
+        MattsAxis,
     ));
     let mut transform = Transform::default();
     transform.translation.z = length / 2.0;
@@ -190,6 +260,7 @@ fn spawn_axis(
             ..default()
         },
         NotShadowCaster,
+        MattsAxis,
     ));
 }
 
