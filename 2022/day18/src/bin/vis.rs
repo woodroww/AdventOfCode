@@ -1,9 +1,13 @@
-use std::collections::HashSet;
 use bevy::input::mouse::{MouseMotion, MouseWheel};
+use bevy::pbr::NotShadowCaster;
 use bevy::prelude::*;
+use std::collections::HashSet;
+
 use bevy_inspector_egui::WorldInspectorPlugin;
 use bevy_mod_picking::*;
-use day18::{input_txt, Point3D, parse_cubes, InputFile, center};
+use day18::{
+    cardinal_3d, center, fill_outside, input_txt, max_xyz, parse_cubes, InputFile, Point3D,
+};
 
 fn main() {
     App::new()
@@ -24,14 +28,24 @@ fn main() {
         .add_startup_system(spawn_camera)
         .add_startup_system(spawn_cubes)
         .add_system(cube_click)
+        .add_system(animate_fill)
         .add_system(pan_orbit_camera)
         .run();
 }
 
-
 #[derive(Resource)]
-pub struct AppAssets {
+pub struct BoulderAssets {
     cubes: HashSet<Point3D>,
+    empties: HashSet<Point3D>,
+    fill_stack: Vec<Point3D>,
+    max_x: usize,
+    max_y: usize,
+    max_z: usize,
+}
+
+#[derive(Component)]
+pub struct BoulderEmpty {
+    location: Point3D,
 }
 
 #[derive(Component)]
@@ -42,34 +56,92 @@ pub struct BoulderCube {
 fn load_assets(mut commands: Commands, assets: Res<AssetServer>) {
     let input = input_txt(InputFile::Example);
     let cubes = parse_cubes(&input);
-    commands.insert_resource(AppAssets { cubes });
+
+    let cubes = cubes
+        .into_iter()
+        .map(|mut cube| {
+            cube.x += 1;
+            cube.y += 1;
+            cube.z += 1;
+            cube
+        })
+        .collect();
+
+    let (max_x, max_y, max_z) = max_xyz(&cubes);
+    /*println!("maxs {} {} {}", max_x, max_y, max_z);
+    let empties = fill_outside(
+        &cubes,
+        Point3D { x: 0, y: 0, z: 0 },
+        max_x,
+        max_y,
+        max_z,
+    );*/
+    let mut fill_stack = Vec::new();
+    fill_stack.push(Point3D { x: 0, y: 0, z: 0 });
+    let empties = HashSet::new();
+    commands.insert_resource(BoulderAssets {
+        cubes,
+        empties,
+        max_x: max_x + 2,
+        max_y: max_y + 2,
+        max_z: max_z + 2,
+        fill_stack,
+    });
+}
+
+pub fn animate_fill(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut assets: ResMut<BoulderAssets>,
+) {
+    if assets.fill_stack.len() > 0 {
+        let p = assets.fill_stack.pop().unwrap();
+        if assets.cubes.contains(&p) == false {
+            let did_insert = assets.empties.insert(p);
+            if did_insert {
+                let transform = Transform::from_xyz(p.x as f32, p.y as f32, p.z as f32);
+                commands
+                    .spawn(PbrBundle {
+                        mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+                        material: materials.add(Color::rgba(0.3, 0.3, 0.9, 0.2).into()),
+                        transform,
+                        ..default()
+                    })
+                    .insert(NotShadowCaster)
+                    //.insert(PickableBundle::default())
+                    .insert(BoulderCube { location: p });
+                let neighbors = cardinal_3d(&p, assets.max_x, assets.max_y, assets.max_z);
+                assets.fill_stack.extend_from_slice(&neighbors);
+            }
+        }
+    }
 }
 
 fn spawn_cubes(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    assets: Res<AppAssets>,
+    assets: Res<BoulderAssets>,
 ) {
     for cube in assets.cubes.iter() {
         let transform = Transform::from_xyz(cube.x as f32, cube.y as f32, cube.z as f32);
-        commands.spawn(PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-            material: materials.add(Color::rgb(0.9, 0.3, 0.3).into()),
-            transform,
-            ..default()
-        })
-        .insert(PickableBundle::default())
-        .insert(BoulderCube { location: *cube });
+        commands
+            .spawn(PbrBundle {
+                mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+                material: materials.add(Color::rgb(0.9, 0.3, 0.3).into()),
+                transform,
+                ..default()
+            })
+            .insert(PickableBundle::default())
+            .insert(BoulderCube { location: *cube });
     }
 }
 
-fn cube_click(
-    selection: Query<(&BoulderCube, &Selection)>,
-) {
+fn cube_click(selection: Query<(&BoulderCube, &Selection)>) {
     for (cube, selection) in &selection {
         if selection.selected() {
-            //println!("click boy {:?}", cube.location);
+            println!("click boy {:?}", cube.location);
         }
     }
 }
@@ -88,28 +160,37 @@ fn spawn_axis(
 
     let mut transform = Transform::default();
     transform.translation.x = length / 2.0;
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Mesh::from(x)),
-        material: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
-        transform,
-        ..default()
-    });
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(Mesh::from(x)),
+            material: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
+            transform,
+            ..default()
+        },
+        NotShadowCaster,
+    ));
     let mut transform = Transform::default();
     transform.translation.y = length / 2.0;
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Mesh::from(y)),
-        material: materials.add(Color::rgb(0.0, 1.0 , 0.0).into()),
-        transform,
-        ..default()
-    });
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(Mesh::from(y)),
+            material: materials.add(Color::rgb(0.0, 1.0, 0.0).into()),
+            transform,
+            ..default()
+        },
+        NotShadowCaster,
+    ));
     let mut transform = Transform::default();
     transform.translation.z = length / 2.0;
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Mesh::from(z)),
-        material: materials.add(Color::rgb(0.0, 0.0, 1.0).into()),
-        transform,
-        ..default()
-    });
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(Mesh::from(z)),
+            material: materials.add(Color::rgb(0.0, 0.0, 1.0).into()),
+            transform,
+            ..default()
+        },
+        NotShadowCaster,
+    ));
 }
 
 // -----------------------------------------------------------------------------
@@ -120,10 +201,14 @@ fn spawn_camera(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    assets: Res<AppAssets>,
+    assets: Res<BoulderAssets>,
 ) {
     let c = center(&assets.cubes);
-    let center_point = Vec3 { x: c.x as f32, y: c.y as f32, z: c.z as f32 };
+    let center_point = Vec3 {
+        x: c.x as f32,
+        y: c.y as f32,
+        z: c.z as f32,
+    };
     let mut transform = Transform::default();
     transform.translation = center_point;
     transform.translation.z = 50.0;
@@ -133,7 +218,6 @@ fn spawn_camera(
         ..Default::default()
     };
 
-        
     commands.spawn((
         cam,
         PickingCameraBundle::default(),

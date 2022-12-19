@@ -35,9 +35,9 @@ pub fn max_xyz(cubes: &HashSet<Point3D>) -> (usize, usize, usize) {
 }
 
 pub fn min_xyz(cubes: &HashSet<Point3D>) -> (usize, usize, usize) {
-    let mut min_x = 0;
-    let mut min_y = 0;
-    let mut min_z = 0;
+    let mut min_x = usize::MAX;
+    let mut min_y = usize::MAX;
+    let mut min_z = usize::MAX;
 
     for cube in cubes.iter() {
         min_x = min_x.min(cube.x);
@@ -53,12 +53,12 @@ pub fn center(cubes: &HashSet<Point3D>) -> Point3D {
     Point3D {
         x: (max_x + min_x) / 2,
         y: (max_y + min_y) / 2,
-        z: (max_z + min_z) / 2, 
+        z: (max_z + min_z) / 2,
     }
 }
 
 pub fn part_1(input: &str) -> String {
-    let cubes = parse_cubes(input); 
+    let cubes = parse_cubes(input);
     let (max_x, max_y, max_z) = max_xyz(&cubes);
     surface_area(&cubes, max_x, max_y, max_z).to_string()
 }
@@ -76,22 +76,97 @@ fn surface_area(cubes: &HashSet<Point3D>, max_x: usize, max_y: usize, max_z: usi
         total += surface_area;
     }
 
-   total 
+    total
 }
 
 pub fn part_2(input: &str) -> String {
-    "".to_string()
+    let cubes = parse_cubes(input);
+    let cubes = cubes
+        .into_iter()
+        .map(|mut cube| {
+            cube.x += 2;
+            cube.y += 2;
+            cube.z += 2;
+            cube
+        })
+        .collect();
+    let (max_x, max_y, max_z) = max_xyz(&cubes);
+    let (min_x, min_y, min_z) = min_xyz(&cubes);
+    println!("min {} {} {}", min_x, min_y, min_z);
+    println!("max {} {} {}", max_x, max_y, max_z);
+
+    let point = Point3D { x: 0, y: 0, z: 0 };
+    let spaces = fill_outside(&cubes, point, max_x + 1, max_y + 1, max_z + 1);
+    let count = find_surface(&cubes, &spaces);
+    println!("outside spaces {}", spaces.len());
+    let count = find_surface(&cubes, &spaces);
+    
+    println!("count  {}", count);
+
+    count.to_string()
 }
 
-fn cardinal_3d(
-    point: &Point3D,
-    x_bound: usize,
-    y_bound: usize,
-    z_bound: usize,
-) -> Vec<Point3D> {
+fn find_surface(
+    cubes: &HashSet<Point3D>,
+    spaces: &HashSet<Point3D>,
+) -> usize {
+    let (max_x, max_y, max_z) = max_xyz(&cubes);
+    let (min_x, min_y, min_z) = min_xyz(&cubes);
+    let mut touching_cubes = HashSet::new();
+    let mut touching_empty = HashSet::new();
+    for space in spaces {
+        let neighbors = cardinal_3d(&space, max_x, max_y, max_z);
+        for n in neighbors {
+            if cubes.contains(&n) {
+                touching_cubes.insert(n);
+                touching_empty.insert(*space);
+            }
+        }
+    }
+
+    let mut count = 0;
+    for cube in cubes.iter() {
+        let neighbors = cardinal_3d(cube, max_x + 2, max_y + 2, max_z + 2);
+        for n in neighbors {
+            if touching_empty.contains(&n) {
+                count += 1;
+            }
+        }
+    }
+
+    count
+}
+
+pub fn fill_outside(
+    cubes: &HashSet<Point3D>,
+    point: Point3D,
+    max_x: usize,
+    max_y: usize,
+    max_z: usize,
+) -> HashSet<Point3D> {
+    let mut spaces: HashSet<Point3D> = HashSet::new();
+    let mut stack: Vec<Point3D> = Vec::new();
+    stack.push(point);
+    while stack.len() > 0 {
+        let p = stack.pop().unwrap();
+        if cubes.contains(&p) == false {
+            if spaces.insert(p) {
+                let neighbors = cardinal_3d(&p, max_x, max_y, max_z);
+                stack.extend_from_slice(&neighbors);
+            }
+        }
+    }
+    spaces
+}
+
+pub fn cardinal_3d(point: &Point3D, x_bound: usize, y_bound: usize, z_bound: usize) -> Vec<Point3D> {
     cardinal_directions_3d(point.x, point.y, point.z, x_bound, y_bound, z_bound)
         .iter()
-        .map(|(x, y, z)| Point3D { x: *x, y: *y, z: *z })
+        .map(|(x, y, z)| Point3D {
+            x: *x,
+            y: *y,
+            z: *z,
+        })
         .collect()
 }
 
@@ -180,7 +255,7 @@ mod tests {
     fn example_part_2() {
         let input = input_txt(InputFile::Example);
         let result = part_2(&input);
-        assert_eq!(result, "0");
+        assert_eq!(result, "58");
     }
 
     #[test]
