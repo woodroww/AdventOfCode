@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 
 impl std::fmt::Display for ValveLayout {
@@ -9,7 +9,6 @@ impl std::fmt::Display for ValveLayout {
 }
 
 fn parse_input(input: &str) -> ValveLayout {
-
     let mut valve_map: HashMap<String, Vec<String>> = HashMap::new();
     let mut flows = HashMap::new();
 
@@ -41,15 +40,6 @@ fn parse_input(input: &str) -> ValveLayout {
     }
 }
 
-fn minute() {
-    let mut total_pressure_released = 0;
-    let open_valves: HashMap<String, usize> = HashMap::new();
-    for (_valve, flow) in open_valves.iter() {
-        total_pressure_released += flow;
-    }
-
-}
-
 struct ValveLayout {
     valve_map: HashMap<String, Vec<String>>,
     flows: HashMap<String, usize>,
@@ -72,13 +62,45 @@ fn graph_viz_string(layout: &ValveLayout) -> String {
     vis_string
 }
 
+
+enum CaveAction {
+    OpenValve(String),
+    Move(String),
+}
+
+fn dfs() {
+}
+
 fn part_1(input: &str) -> String {
     let layout = parse_input(input);
-    for _ in 0..30 {
-        minute();
+    //let vis_string = graph_viz_string(&layout);
+    //println!("{}", vis_string);
+
+    let mut total_pressure_released = 0;
+    let mut open_valves: HashMap<String, usize> = HashMap::new();
+    let mut visited: HashSet<String> = HashSet::new();
+    let mut current = "AA";
+    let mut stack: Vec<String> = Vec::new();
+    let mut minutes = 30;
+
+    while minutes > 0 {
+        if stack.len() == 0 {
+            break;
+        }
+        let current = stack.pop().unwrap();
+        let neightbors = layout.valve_map.get(&current).unwrap();
+        if !open_valves.contains_key(&current) && layout.flows.get(&current).unwrap() > &0 {
+
+        } else {
+            for m in neightbors {
+                if !visited.contains(m) {
+                    stack.push(m.to_string());
+                }
+            }
+        }
+        total_pressure_released += open_valves.iter().map(|(_k,v)| v).sum::<usize>();
+        minutes -= 1;
     }
-    let vis_string = graph_viz_string(&layout);
-    println!("{}", vis_string);
 
     "".to_string()
 }
