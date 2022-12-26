@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 
-
 impl std::fmt::Display for ValveLayout {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:#?}", self.valve_map)?;
@@ -34,16 +33,10 @@ fn parse_input(input: &str) -> ValveLayout {
         //println!();
     }
 
-    ValveLayout {
-        valve_map,
-        flows,
-    }
+    ValveLayout { valve_map, flows }
 }
 
-struct ValveLayout {
-    valve_map: HashMap<String, Vec<String>>,
-    flows: HashMap<String, usize>,
-}
+// https://dreampuf.github.io/GraphvizOnline
 
 fn graph_viz_string(layout: &ValveLayout) -> String {
     let mut vis_ids: HashMap<String, usize> = HashMap::new();
@@ -62,13 +55,83 @@ fn graph_viz_string(layout: &ValveLayout) -> String {
     vis_string
 }
 
-
 enum CaveAction {
     OpenValve(String),
     Move(String),
 }
 
-fn dfs() {
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct FancyKey {
+    current: String,
+    time: i64,
+    other_players: i64,
+    opened_valves: Vec<String>,
+}
+
+struct ValveLayout {
+    valve_map: HashMap<String, Vec<String>>,
+    flows: HashMap<String, usize>,
+}
+
+impl ValveLayout {
+    fn maxflow(
+        &self,
+        current: String,
+        time: i64,
+        other_players: i64,
+        memo: &mut HashMap<FancyKey, i64>,
+        mut opened_valves: Vec<String>,
+    ) -> i64 {
+        if time == 0 {
+            return if other_players > 0 {
+                self.maxflow("AA".to_string(), 26, other_players - 1, memo, opened_valves)
+            } else {
+                0
+            };
+        }
+
+        let key = FancyKey {
+            current: current.clone(),
+            time,
+            other_players,
+            opened_valves: opened_valves.clone(),
+        };
+        if let Some(flow) = memo.get(&key) {
+            return *flow;
+        }
+        // the point of dynamic programming, when the number of states is much smaller than the
+        // sequence of actions you could take, store the states in a memo
+
+        let mut answer = 0;
+        let current_closed = !opened_valves.contains(&current);
+        let current_flow = *self.flows.get(&current).unwrap() as i64;
+
+        // is the valve at the current position closed and does it have a flow > 0
+        // then open valve
+        if current_closed && current_flow > 0 {
+            //let new_u = u | (1i64 << current_idx);
+            opened_valves.push(current.clone());
+            answer = answer.max(
+                (time - 1) * current_flow 
+                    + self.maxflow(current.to_string(), time - 1, other_players, memo, opened_valves.clone()),
+            );
+        }
+
+        for n in self.valve_map.get(&current).unwrap() {
+            answer = answer.max(self.maxflow(
+                n.to_string(),
+                time - 1,
+                other_players,
+                memo,
+                opened_valves.clone(),
+            ));
+        }
+
+        let e = memo.entry(key).or_insert(0);
+        *e = answer;
+
+        answer
+    }
 }
 
 fn part_1(input: &str) -> String {
@@ -76,33 +139,13 @@ fn part_1(input: &str) -> String {
     //let vis_string = graph_viz_string(&layout);
     //println!("{}", vis_string);
 
-    let mut total_pressure_released = 0;
-    let mut open_valves: HashMap<String, usize> = HashMap::new();
-    let mut visited: HashSet<String> = HashSet::new();
-    let mut current = "AA";
-    let mut stack: Vec<String> = Vec::new();
-    let mut minutes = 30;
+    //println!("flow_rates.len() {}", layout.flows.len());
+    //println!("{:?}", &layout.flows);
+    let mut memo: HashMap<FancyKey, i64> = HashMap::new();
+    let opened_valves = Vec::new();
+    let answer = layout.maxflow("AA".to_string(), 30, 0, &mut memo, opened_valves);
 
-    while minutes > 0 {
-        if stack.len() == 0 {
-            break;
-        }
-        let current = stack.pop().unwrap();
-        let neightbors = layout.valve_map.get(&current).unwrap();
-        if !open_valves.contains_key(&current) && layout.flows.get(&current).unwrap() > &0 {
-
-        } else {
-            for m in neightbors {
-                if !visited.contains(m) {
-                    stack.push(m.to_string());
-                }
-            }
-        }
-        total_pressure_released += open_valves.iter().map(|(_k,v)| v).sum::<usize>();
-        minutes -= 1;
-    }
-
-    "".to_string()
+    answer.to_string()
 }
 
 fn part_2(input: &str) -> String {
@@ -110,8 +153,8 @@ fn part_2(input: &str) -> String {
 }
 
 fn main() {
-    //let input = input_txt(InputFile::Example);
-    let input = input_txt(InputFile::Real);
+    let input = input_txt(InputFile::Example);
+    //let input = input_txt(InputFile::Real);
 
     println!("Part 1: {}", part_1(&input));
     //println!("Part 2: {}", part_2(&input));
@@ -124,45 +167,39 @@ pub enum InputFile {
 
 pub fn input_txt(input: InputFile) -> String {
     match input {
-        InputFile::Example => {
-            std::fs::read_to_string("example.txt")
-                .expect("No example.txt file")
-        },
-        InputFile::Real => {
-            std::fs::read_to_string("input.txt")
-                .expect("No input.txt file")
-        },
+        InputFile::Example => std::fs::read_to_string("example.txt").expect("No example.txt file"),
+        InputFile::Real => std::fs::read_to_string("input.txt").expect("No input.txt file"),
     }
 }
 
 #[cfg(test)]
 mod tests {
-	use super::*;
+    use super::*;
     #[test]
     fn example_part_1() {
         let input = input_txt(InputFile::Example);
-		let result = part_1(&input);
-        assert_eq!(result, "0");
-	}
+        let result = part_1(&input);
+        assert_eq!(result, "1651");
+    }
 
     #[test]
     fn example_part_2() {
         let input = input_txt(InputFile::Example);
-		let result = part_2(&input);
-        assert_eq!(result, "0");
-	}
+        let result = part_2(&input);
+        assert_eq!(result, "1707");
+    }
 
     #[test]
     fn real_part_1() {
         let input = input_txt(InputFile::Real);
-		let result = part_1(&input);
-        assert_eq!(result, "0");
-	}
+        let result = part_1(&input);
+        assert_eq!(result, "1792");
+    }
 
     #[test]
     fn real_part_2() {
         let input = input_txt(InputFile::Real);
-		let result = part_2(&input);
+        let result = part_2(&input);
         assert_eq!(result, "0");
-	}
+    }
 }

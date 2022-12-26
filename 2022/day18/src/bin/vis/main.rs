@@ -51,6 +51,8 @@ pub struct BoulderAssets {
     max_z: usize,
     touch_cubes: HashSet<Point3D>,
     touch_empties: HashSet<Point3D>,
+    show_level: usize,
+    max_show_y: usize,
 }
 
 #[derive(Component)]
@@ -123,6 +125,8 @@ fn load_assets(mut commands: Commands) {
         fill_stack: fill_order.into_iter().rev().collect(),
         touch_cubes,
         touch_empties,
+        show_level: max_y,
+        max_show_y: max_y,
     });
 }
 

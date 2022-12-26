@@ -9,6 +9,12 @@ struct Position {
     y: isize,
 }
 
+impl std::fmt::Display for Position {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {})", self.x, self.y)
+    }
+}
+
 #[derive(Debug)]
 struct GridSize {
     x: isize,
@@ -17,11 +23,6 @@ struct GridSize {
     y_origin: isize,
 }
 
-impl std::fmt::Display for Position {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({}, {})", self.x, self.y)
-    }
-}
 
 fn part_1(input: String) -> usize {
     let mut tail_visits: HashSet<Position> = HashSet::new();
