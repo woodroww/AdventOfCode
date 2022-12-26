@@ -1,6 +1,6 @@
-use nannou::{prelude::Update, App, LoopMode, window, Frame, color::*};
+use nannou::{App, LoopMode, window, Frame, color::*, prelude::Update};
 
-//use crate::input_txt;
+use day24::*;
 
 fn main() {
     nannou::app(model).update(update).run();
@@ -13,11 +13,10 @@ struct Model {
 
 impl Model {
     fn new(window: window::Id) -> Self {
-        //let input = input_txt(InputFile::Real);
+        let input = input_txt(InputFile::Real);
         Model {
             _window: window,
-            //_input: input,
-            _input: "".to_string(),
+            _input: input,
         }
     }
 }
@@ -28,7 +27,7 @@ fn model(app: &App) -> Model {
     Model::new(_window)
 }
 
-fn update(_app: &App, model: &mut Model, _update: Update) {
+fn update(_app: &App, _model: &mut Model, _update: Update) {
     //println!("since_last {}", update.since_last.as_millis());
 }
 

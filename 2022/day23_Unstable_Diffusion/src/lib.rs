@@ -2,9 +2,9 @@ use std::collections::{HashSet, HashMap};
 
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
-struct Position {
-    x: isize,
-    y: isize,
+pub struct Position {
+    pub x: isize,
+    pub y: isize,
 }
 
 impl std::fmt::Display for Position {
@@ -13,7 +13,7 @@ impl std::fmt::Display for Position {
     }
 }
 
-fn max_xy_min_xy(elves: &HashSet<Position>) -> (isize, isize, isize, isize) {
+pub fn max_xy_min_xy(elves: &HashSet<Position>) -> (isize, isize, isize, isize) {
     let min_x = elves
         .iter()
         .map(|s| s.x.min(s.x))
@@ -37,7 +37,7 @@ fn max_xy_min_xy(elves: &HashSet<Position>) -> (isize, isize, isize, isize) {
     (max_x, max_y, min_x, min_y)
 }
 
-fn parse_input(input: &str) -> HashSet<Position> {
+pub fn parse_input(input: &str) -> HashSet<Position> {
     let mut result = HashSet::new();
     for (row, line) in input.lines().enumerate() {
         for (col, c) in line.chars().enumerate() {
@@ -49,7 +49,7 @@ fn parse_input(input: &str) -> HashSet<Position> {
     result
 }
 
-fn print_grid(elves: &HashSet<Position>) {
+pub fn print_grid(elves: &HashSet<Position>) {
     let (max_x, max_y, min_x, min_y) = max_xy_min_xy(&elves);
     //println!("max:({},{}) min:({},{})", max_x, max_y, min_x, min_y);
 
@@ -71,9 +71,9 @@ fn print_grid(elves: &HashSet<Position>) {
     }
 }
 
-struct ElfMove {
-    from: Position,
-    to: Position,
+pub struct ElfMove {
+    pub from: Position,
+    pub to: Position,
 }
 
 impl std::fmt::Display for ElfMove {
@@ -82,7 +82,7 @@ impl std::fmt::Display for ElfMove {
     }
 }
 
-fn consider_n(elf: &Position, elves: &HashSet<Position>) -> Option<ElfMove> {
+pub fn consider_n(elf: &Position, elves: &HashSet<Position>) -> Option<ElfMove> {
     let n = Position { x: elf.x, y: elf.y - 1 };
     let ne = Position { x: elf.x + 1, y: elf.y - 1 };
     let nw = Position { x: elf.x - 1, y: elf.y - 1 };
@@ -93,7 +93,7 @@ fn consider_n(elf: &Position, elves: &HashSet<Position>) -> Option<ElfMove> {
     }
 }
 
-fn consider_s(elf: &Position, elves: &HashSet<Position>) -> Option<ElfMove> {
+pub fn consider_s(elf: &Position, elves: &HashSet<Position>) -> Option<ElfMove> {
     let s = Position { x: elf.x, y: elf.y + 1 };
     let se = Position { x: elf.x + 1, y: elf.y + 1 };
     let sw = Position { x: elf.x - 1, y: elf.y + 1 };
@@ -104,7 +104,7 @@ fn consider_s(elf: &Position, elves: &HashSet<Position>) -> Option<ElfMove> {
     }
 }
 
-fn consider_w(elf: &Position, elves: &HashSet<Position>) -> Option<ElfMove> {
+pub fn consider_w(elf: &Position, elves: &HashSet<Position>) -> Option<ElfMove> {
     let w = Position { x: elf.x - 1, y: elf.y };
     let nw = Position { x: elf.x - 1, y: elf.y - 1 };
     let sw = Position { x: elf.x - 1, y: elf.y + 1 };
@@ -131,7 +131,7 @@ fn consider_e(elf: &Position, elves: &HashSet<Position>) -> Option<ElfMove> {
 //  2   S, W, E, N
 //  3   W, E, N, S
 //  4   E, N, S, W
-fn propose_move(elf: &Position, elves: &HashSet<Position>, round: usize) -> Option<ElfMove> {
+pub fn propose_move(elf: &Position, elves: &HashSet<Position>, round: usize) -> Option<ElfMove> {
     if round % 4 == 0 {
         if let Some(elf_move) = consider_n(elf, elves) {
             return Some(elf_move);
@@ -193,7 +193,7 @@ fn propose_move(elf: &Position, elves: &HashSet<Position>, round: usize) -> Opti
     panic!("what?");
 }
 
-fn any_adjacent_elves(position: &Position, elves: &HashSet<Position>) -> bool {
+pub fn any_adjacent_elves(position: &Position, elves: &HashSet<Position>) -> bool {
     
     let left = Position { x: position.x - 1, y: position.y };
     if elves.contains(&left) {
@@ -230,7 +230,7 @@ fn any_adjacent_elves(position: &Position, elves: &HashSet<Position>) -> bool {
     false
 }
 
-fn part_1(input: &str) -> String {
+pub fn part_1(input: &str) -> String {
     let mut elves = parse_input(input);
     /*print_grid(&elves);
     println!();*/
@@ -272,12 +272,12 @@ fn part_1(input: &str) -> String {
     let width = max_x - min_x + 1;
     let height = max_y - min_y + 1;
     let cells = width * height;
-    //println!("width:{}, height:{}, cells:{}", width, height, cells);
+    println!("width:{}, height:{}, cells:{}", width, height, cells);
     let empties = cells - elves.len() as isize;
     empties.to_string()
 }
 
-fn part_2(input: &str) -> String {
+pub fn part_2(input: &str) -> String {
     let mut elves = parse_input(input);
     let mut round = 0;
     let mut elf_moved = true; 
@@ -316,15 +316,6 @@ fn part_2(input: &str) -> String {
     }
 
     (round + 1).to_string()
-}
-
-fn main() {
-    //let input = input_txt(InputFile::Example);
-    //let input = std::fs::read_to_string("small.txt").expect("No example.txt file");
-    let input = input_txt(InputFile::Real);
-
-    println!("Part 1: {}", part_1(&input));
-    println!("Part 2: {}", part_2(&input));
 }
 
 pub enum InputFile {
