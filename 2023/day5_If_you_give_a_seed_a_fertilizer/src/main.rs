@@ -1,15 +1,35 @@
 use std::{io::BufRead, ops::Range};
 
-fn parse_seeds(seeds: &str) -> Vec<u8> {
+fn parse_seeds_1(seeds: &str) -> Vec<usize> {
     let splitsies = seeds.split(": ");
-    let seeds_to_plant: Vec<u8> = splitsies
+    let seeds_to_plant: Vec<usize> = splitsies
         .skip(1)
         .next()
         .unwrap()
         .split(" ")
-        .map(|s| s.parse::<u8>().unwrap())
+        .map(|s| s.parse::<usize>().unwrap())
         .collect();
     seeds_to_plant
+}
+
+fn parse_seeds_2(seeds: &str) -> Vec<usize> {
+    let splitsies = seeds.split(": ");
+    let seed_ranges: Vec<usize> = splitsies
+        .skip(1)
+        .next()
+        .unwrap()
+        .split(" ")
+        .map(|s| s.parse::<usize>().unwrap())
+        .collect();
+    println!("seed ranges: {:?}", seed_ranges);
+    let mut seeds = vec![];
+    for range in seed_ranges.chunks(2) {
+        let start = range[0];
+        let len = range[1];
+        let seed_numbers: Vec<usize> = (start..start+len).collect();
+        seeds.extend_from_slice(&seed_numbers);
+    }
+    seeds
 }
 
 struct RangeMap {
@@ -20,10 +40,12 @@ struct RangeMap {
 impl RangeMap {
     fn src_to_dst(&self, src: usize) -> Option<usize> {
         if self.source.contains(&src) {
+            /*
             println!("dest:{} src:{} len:{}",
                 self.destination.start,
                 self.source.start,
                 self.source.end - self.source.start);
+            */
             Some((src - self.source.start) + self.destination.start)
         } else {
             None
@@ -71,7 +93,9 @@ fn parse_map(input: &str) -> AlmanacMap {
     let title = splitsies.next().unwrap();
     let mut src_dest = title.split("-to-");
     let source_string = src_dest.next().unwrap();
-    let destination_string = src_dest.next().unwrap();
+    let dest_string = src_dest.next().unwrap();
+    let mut destination_string = dest_string.split(" ");
+    let destination_string = destination_string.next().unwrap();
     for line in splitsies {
         let mut map_parts = line.split(" ");
         let dest = map_parts.next().unwrap().parse::<usize>().unwrap();
@@ -89,9 +113,15 @@ fn parse_map(input: &str) -> AlmanacMap {
     }
 }
 
-fn parse_input(input: &str) -> (Vec<u8>, Vec<AlmanacMap>) {
+fn parse_input(input: &str, part: u8) -> (Vec<usize>, Vec<AlmanacMap>) {
     let mut sections = input.split("\n\n");
-    let seeds = parse_seeds(sections.next().unwrap());
+    let seeds = if part == 1 {
+        parse_seeds_1(sections.next().unwrap())
+    } else if part == 2 {
+        parse_seeds_2(sections.next().unwrap())
+    } else {
+        panic!("part must be 1 or 2");
+    };
     let mut maps = vec![];
     for section in sections.into_iter() {
         maps.push(parse_map(section.trim_end()));
@@ -100,39 +130,51 @@ fn parse_input(input: &str) -> (Vec<u8>, Vec<AlmanacMap>) {
 }
 
 fn part_1(input: &str) -> String {
-    let (seeds, maps) = parse_input(input);
+    let (seeds, maps) = parse_input(input, 1);
+    /*
     println!("seeds: {:?}", seeds);
     for map in &maps {
         println!("{}", map);
     }
+    */
+    convert_seeds(seeds, maps)
+}
 
-    let seed = 13;
-    println!("seed:{} soil:{}", seed, maps[0].src_to_dst(seed));
+fn convert_seeds(seeds: Vec<usize>, maps: Vec<AlmanacMap>) -> String {
+    let mut min_location = usize::MAX;
+    for seed in &seeds {
+        println!("seed:{}", seed);
+        let mut prev_value = None;
+        for map in &maps {
+            if prev_value.is_none() {
+                prev_value = Some(*seed);
+            };
+            let value = map.src_to_dst(prev_value.unwrap());
+            //println!("map: {}-to-{}", map.source_string, map.destination_string);
+            println!("{}:{}", map.destination_string, value);
+            prev_value = Some(value);
+        }
+        let location = prev_value.unwrap();
+        if location < min_location {
+            min_location = location;
+        }
+        println!();
+    }
 
-
-    "".to_string()
+    min_location.to_string()
 }
 
 fn part_2(input: &str) -> String {
-    "".to_string()
+    let (seeds, maps) = parse_input(input, 2);
+    convert_seeds(seeds, maps)
 }
 
 fn main() {
-    /*
-    let src = 50;
-    let range_length = 2;
-    let range = src..src+range_length;
-    println!("{:?}", range);
-    for r in range {
-        print!("{} ", r);
-    }
-    println!();
-    */
-    let input = input_txt(InputFile::Example);
-    //let input = input_txt(InputFile::Real);
+    //let input = input_txt(InputFile::Example);
+    let input = input_txt(InputFile::Real);
 
-    println!("Part 1: {}", part_1(&input));
-    //println!("Part 2: {}", part_2(&input));
+    //println!("Part 1: {}", part_1(&input));
+    println!("Part 2: {}", part_2(&input));
 }
 
 pub enum InputFile {
@@ -156,7 +198,7 @@ mod tests {
         let seeds_expected = vec![79, 14, 55, 13];
         let soils_expected = vec![81, 14, 57, 13];
         let input = input_txt(InputFile::Example);
-        let (_seeds, maps) = parse_input(&input);
+        let (_seeds, maps) = parse_input(&input, 1);
         for (seed, soil) in seeds_expected.into_iter().zip(soils_expected) {
             let soil_result = maps[0].src_to_dst(seed);
             assert_eq!(soil, soil_result);
@@ -174,14 +216,14 @@ mod tests {
     fn real_part_1() {
         let input = input_txt(InputFile::Real);
         let result = part_1(&input);
-        assert_eq!(result, "0");
+        assert_eq!(result, "579439039");
     }
 
     #[test]
     fn example_part_2() {
         let input = input_txt(InputFile::Example);
         let result = part_2(&input);
-        assert_eq!(result, "0");
+        assert_eq!(result, "46");
     }
 
     #[test]
