@@ -56,7 +56,7 @@ pub fn sand_step(cave: &mut Cave) -> MoveType {
 
 fn update(_app: &App, model: &mut Model, _update: Update) {
     //println!("since_last {}", update.since_last.as_millis());
-    let how_many = 500;
+    let how_many = 5000;
     let mut count = 0;
     while model.off_map == false && model.spawner_blocked == false && count < how_many {
         match sand_step(&mut model.cave) {

@@ -272,15 +272,14 @@ fn find_main_loop(
     let mut main_loop = vec![];
     loop {
         if row == start_row && col == start_col && prev.is_some() {
-            println!("break");
+            //println!("break");
             break;
         }
         main_loop.push((row, col));
-        println!("loop row:{} col:{}", row, col);
+        //println!("loop row:{} col:{}", row, col);
         let current_node = connections(col, row, &pipes);
-        //println!("prev: {:?}", prev);
-        println!("{}", current_node);
-        println!();
+        //println!("{}", current_node);
+        //println!();
         if let Some((prev_row, prev_col)) = prev {
             prev = Some((row, col));
             if current_node.forward.row == prev_row && current_node.forward.col == prev_col
@@ -303,10 +302,10 @@ fn find_main_loop(
 
 fn connections(col: usize, row: usize, pipes: &Vec<Vec<PipeType>>) -> Node {
     let acceptable = acceptable_neighbors(col, row, &pipes);
-    print_pipes(pipes, None);
+    //print_pipes(pipes, None);
     let mut connected = vec![];
     for n in acceptable {
-        print!("{} {} ", pipes[row][col], n);
+        //print!("{} {} ", pipes[row][col], n);
         let real_pipe = &pipes[n.row][n.col];
         if n.acceptable.contains(&real_pipe) {
             connected.push(Connection {
@@ -315,7 +314,7 @@ fn connections(col: usize, row: usize, pipes: &Vec<Vec<PipeType>>) -> Node {
                 pipe: real_pipe.clone(),
             });
         }
-        println!();
+        //println!();
     }
     if connected.len() > 2 {
         println!("!! found MORE than two connections !!");
@@ -405,6 +404,28 @@ pub fn neighbors(
     dirs
 }
 
+fn find_farthest(main_loop: &Vec<(usize, usize)>) -> i32 {
+    let mut count = 0;
+    let first_half_end = main_loop.len() / 2;
+    //println!("len {}", main_loop.len());
+    //println!("first_half_end {}", first_half_end);
+    let forward = &main_loop[0..first_half_end];
+    let mut distances = vec![];
+    
+    for (_row, _col) in forward.iter() {
+        //println!("({}, {}) {}", row, col, count);
+        distances.push(count);
+        count += 1;
+    }
+    let backward = &main_loop[first_half_end..main_loop.len()];
+    for (_row, _col) in backward.iter() {
+        //println!("({}, {}) {}", row, col, count);
+        distances.push(count);
+        count -= 1;
+    }
+    *distances.iter().max().unwrap()
+}
+
 fn part_1(input: &str) -> String {
     let (mut pipes, (start_row, start_col)) = parse_input(input);
     //print_pipes(&pipes);
@@ -414,10 +435,12 @@ fn part_1(input: &str) -> String {
     let main_loop = find_main_loop(&pipes, start_row, start_col);
     print_pipes(&pipes, Some(&main_loop));
 
+    println!("main loop {}", main_loop.len());
+    let max = find_farthest(&main_loop);
 
-    println!("main loop {:?}", main_loop);
+    //println!("main loop {:?}", main_loop);
 
-    "".to_string()
+    max.to_string()
 }
 
 fn part_2(input: &str) -> String {
@@ -427,8 +450,8 @@ fn part_2(input: &str) -> String {
 fn main() {
     //let input = input_txt(InputFile::Example);
     //let input = std::fs::read_to_string("example2.txt").expect("No example.txt file");
-    let input = std::fs::read_to_string("example3.txt").expect("No example.txt file");
-    //let input = input_txt(InputFile::Real);
+    //let input = std::fs::read_to_string("example3.txt").expect("No example.txt file");
+    let input = input_txt(InputFile::Real);
 
     println!("Part 1: {}", part_1(&input));
     //println!("Part 2: {}", part_2(&input));
@@ -451,16 +474,16 @@ mod tests {
     use super::*;
     #[test]
     fn example_part_1() {
-        let input = input_txt(InputFile::Example);
+        let input = std::fs::read_to_string("example3.txt").expect("No example.txt file");
         let result = part_1(&input);
-        assert_eq!(result, "0");
+        assert_eq!(result, "8");
     }
 
     #[test]
     fn real_part_1() {
         let input = input_txt(InputFile::Real);
         let result = part_1(&input);
-        assert_eq!(result, "0");
+        assert_eq!(result, "6701");
     }
 
     #[test]
