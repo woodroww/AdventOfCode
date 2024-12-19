@@ -56,20 +56,19 @@ fn reorder_update(update: &Vec<u32>, rules: &Rules) -> Vec<u32> {
     let update_set: HashSet<u32> = HashSet::from_iter(update.clone());
     let mut big_d: HashMap<u32, usize> = HashMap::new();
 
-    for v in update {
-        if let Some(ev_vec) = rules.pages_before_key.get(v) {
-            let ev: HashSet<u32> = HashSet::from_iter(ev_vec.clone());
-            let inter: Vec<&u32> = ev.intersection(&update_set).collect();
-            big_d.entry(*v).and_modify(|e| *e = inter.len()).or_insert(inter.len());
+    for page in update {
+        if let Some(before) = rules.pages_before_key.get(page) {
+            let before_set: HashSet<u32> = HashSet::from_iter(before.clone());
+            let inter: Vec<&u32> = before_set.intersection(&update_set).collect();
+            big_d.entry(*page).and_modify(|e| *e = inter.len()).or_insert(inter.len());
         } else {
-            // could update have duplicates then len could be a problem
-            big_d.entry(*v).and_modify(|e| *e = 0).or_insert(0);
+            big_d.entry(*page).and_modify(|e| *e = 0).or_insert(0);
         }
     }
 
-    for v in update {
-        if *big_d.get(v).unwrap() == 0 {
-            q.push_back(*v);
+    for page in update {
+        if *big_d.get(page).unwrap() == 0 {
+            q.push_back(*page);
         }
     }
 
